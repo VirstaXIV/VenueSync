@@ -1,0 +1,13 @@
+{
+  "Author": "Virsta",
+  "Name": "VenueSync",
+  "Punchline": "Venue data syncing and management.",
+  "Description": "Provides information on venues and data related to them.",
+  "ApplicableVersion": "any",
+  "RepoUrl": "https://github.com/VirstaXIV/VenueSync",
+  "Tags": [
+    "venue",
+    "guests"
+  ],
+  "IconUrl": "https://raw.githubusercontent.com/VirstaXIV/VenueSync/master/images/icon.png"
+}
