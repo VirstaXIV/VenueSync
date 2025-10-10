@@ -4,15 +4,67 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="04e0d1f6-b001-4129-81da-8df351bd6ae4" name="Changes" comment="" />
+    <list default="true" id="04e0d1f6-b001-4129-81da-8df351bd6ae4" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.gitmodules" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/OtterGui" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Services/VenueService.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync.sln" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync.sln" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/VenueSync.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/VenueSync.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/VenueSync.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/VenueSync.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/packages.lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/packages.lock.json" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="Git.Settings">
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/VenueSync" />
+  <component name="DpaMonitoringSettings">
+    <option name="firstShow" value="false" />
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "VirstaXIV"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/VirstaXIV/VenueSync.git",
+    "accountId": "cf89994c-aace-41b0-8a35-57c1dac07659"
+  }
+}]]></component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/832f47f22e46475f894c1accca75d16612200/d3/5f922254/PusherOptions.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/9d5367d25de84545a2d1fd97884d528716200/69/a4cde464/PusherOptions.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/9d5367d25de84545a2d1fd97884d528716200/6b/5ceba22a/OperationTimeoutException.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/9d5367d25de84545a2d1fd97884d528716200/b5/dd52c740/ChannelUnauthorizedException.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/9d5367d25de84545a2d1fd97884d528716200/cc/10108411/ChannelAuthorizationFailureException.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/81f3fd7e2b484961b4153548f07e2749cc67a3daa1b085b5e4fd7181484507a/NotificationType.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/bf75becd713b2a9776ec893c58f6b559a6e5f32bd05a13722c770c09c46c75/Util.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Configuration.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/EphemeralConfig.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Events/TabSelected.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Events/VenueEntered.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/AccountService.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/CommandService.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/LocationService.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/SaveService.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/SocketService.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/TerritoryWatcher.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/VenueService.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Ui/MainWindow.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Ui/Tabs/SettingsTab/SettingsTab.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Ui/VenueSyncWindowSystem.cs" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="KubernetesApiPersistence">{}</component>
+  <component name="KubernetesApiProvider">{
+  &quot;isMigrated&quot;: true
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 3
 }</component>
@@ -23,18 +75,26 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Attach to Process.21352:ffxiv_dx11.executor": "Debug",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "XThreadsFramesViewSplitterKey": "0.64641744",
     "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings",
+    "settings.editor.selected.configurable": "debugger.stepping",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="CidrLocalAttachDebugger.recentlyUsed">
+      <recent name="com.jetbrains.rider.cpp.debugger.RiderCppLLDBDriverConfiguration" />
+    </key>
+  </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="04e0d1f6-b001-4129-81da-8df351bd6ae4" name="Changes" comment="" />
@@ -43,7 +103,8 @@
       <option name="presentableId" value="Default" />
       <updated>1759958965748</updated>
       <workItem from="1759958967355" duration="2426000" />
-      <workItem from="1759975586246" duration="461000" />
+      <workItem from="1759975586246" duration="68950000" />
+      <workItem from="1760073011508" duration="3826000" />
     </task>
     <servers />
   </component>
@@ -65,7 +126,8 @@
           <option name="timeStamp" value="1" />
         </breakpoint>
         <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
-          <properties exception="System.Threading.Tasks.TaskCanceledException" breakIfHandledByOtherCode="false" displayValue="System.Threading.Tasks.TaskCanceledException" />
+          <dependency master-id="0" />
+          <properties exception="System.Threading.Tasks.TaskCanceledException" breakIfHandledByUserCode="true" breakIfHandledByOtherCode="false" displayValue="System.Threading.Tasks.TaskCanceledException" />
           <option name="timeStamp" value="2" />
         </breakpoint>
         <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
@@ -73,6 +135,15 @@
           <option name="timeStamp" value="3" />
         </breakpoint>
       </breakpoints>
+      <default-breakpoints>
+        <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
+          <dependency id="0" />
+        </breakpoint>
+      </default-breakpoints>
     </breakpoint-manager>
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
   </component>
 </project>
