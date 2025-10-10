@@ -3,39 +3,38 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using VenueSync.Events;
+using VenueSync.State;
 
 namespace VenueSync.Services;
-
-public class House
-{
-    public long HouseId {get; set;} = 0;
-    public int Plot {get; set;} = 0;
-    public int Ward {get; set;} = 0;
-    public int Room {get; set;} = 0;
-    public string District {get; set;} = "";
-    public uint? WorldId {get; set;} = 0;
-    public string Type {get; set;} = "";
-    public string WorldName {get; set;} = "";
-    public string DataCenter {get; set;} = "";
-}
 
 public class TerritoryWatcher: IDisposable
 {
     private readonly IFramework _framework;
     private readonly IClientState _clientState;
+    private readonly SocketService _socketService;
+    private readonly StateService _stateService;
     private readonly LocationService _locationService;
+    
+    private readonly ServiceConnected _serviceConnected;
 
     private bool _isInHouse = false;
     private bool _wasInHouse = false;
     public ushort CurrentTerritory;
-    private House _activeHouse = new House();
     private bool _running = false;
     
-    public TerritoryWatcher(IFramework framework, IClientState clientState, LocationService locationService)
+    public TerritoryWatcher(IFramework framework, IClientState clientState, SocketService socketService, StateService stateService, 
+        LocationService locationService, ServiceConnected @serviceConnected)
     {
         _framework = framework;
         _clientState = clientState;
+        _socketService = socketService;
+        _stateService = stateService;
         _locationService = locationService;
+        
+        _serviceConnected = @serviceConnected;
+        
+        _serviceConnected.Subscribe(OnConnection, ServiceConnected.Priority.None);
         
         _framework.Update += OnFrameworkUpdate;
         _clientState.TerritoryChanged += OnTerritoryChanged;
@@ -118,7 +117,7 @@ public class TerritoryWatcher: IDisposable
     private void OnFrameworkUpdate(IFramework framework)
     {
         if (_running) {
-            VenueSync.Log.Warning("Skipping processing while already running.");
+            VenueSync.Log.Warning("Skipping processing territory while already running.");
             return;
         }
         _running = true;
@@ -137,10 +136,9 @@ public class TerritoryWatcher: IDisposable
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            VenueSync.Log.Error("VenueSync Failed during framework update");
-            VenueSync.Log.Error(e.ToString());
+            VenueSync.Log.Error("VenueSync Failed during framework update (territory)");
         }
         
         _running = false;
@@ -170,14 +168,25 @@ public class TerritoryWatcher: IDisposable
         }
     }
 
+    private void OnConnection()
+    {
+        if (_stateService.CurrentHouse.HouseId > 0)
+        {
+            SendLocation();
+        }
+    }
+
     private void SendLocation()
     {
         _ = Task.Run(async () =>
         {
-            var reply = await _locationService.SendLocation(_activeHouse);
-            if (reply is { Success: false, Graceful: false })
+            if (_socketService.Connected)
             {
-                VenueSync.Log.Warning("Failed to query location.");
+                var reply = await _locationService.SendLocation(_stateService.CurrentHouse);
+                if (reply is { Success: false, Graceful: false })
+                {
+                    VenueSync.Log.Warning("Failed to query location.");
+                }
             }
         });
     }
@@ -187,9 +196,9 @@ public class TerritoryWatcher: IDisposable
         var housingManager = HousingManager.Instance();
         var worldId = _clientState.LocalPlayer?.CurrentWorld.Value.RowId!;
         
-        if (_activeHouse.HouseId != (long)housingManager->GetCurrentIndoorHouseId().Id && worldId != null)
+        if (_stateService.CurrentHouse.HouseId != (long)housingManager->GetCurrentIndoorHouseId().Id && worldId != null)
         {
-            _activeHouse = new House {
+            _stateService.CurrentHouse = new House() {
                 HouseId = (long)housingManager->GetCurrentIndoorHouseId().Id,
                 District = GetDistrict((long)housingManager->GetCurrentIndoorHouseId().Id),
                 Type = GetHouseType((ushort)HousingManager.GetOriginalHouseTerritoryTypeId()),
@@ -197,15 +206,15 @@ public class TerritoryWatcher: IDisposable
                 Ward = housingManager->GetCurrentWard() + 1,
                 Room = housingManager->GetCurrentRoom(),
                 WorldId = worldId,
-                WorldName = GetWorldName(worldId),
-                DataCenter = GetDataCenter(worldId)
+                WorldName = GetWorldName(worldId).ToLower(),
+                DataCenter = GetDataCenter(worldId).ToLower()
             };
 
-            var address = $"{_activeHouse.District} {_activeHouse.Ward}/{_activeHouse.Plot} {_activeHouse.WorldName} [{_activeHouse.DataCenter}]";
+            var address = $"{_stateService.CurrentHouse.District} {_stateService.CurrentHouse.Ward}/{_stateService.CurrentHouse.Plot} {_stateService.CurrentHouse.WorldName} [{_stateService.CurrentHouse.DataCenter}]";
 
-            if (_activeHouse.Room != 0)
+            if (_stateService.CurrentHouse.Room != 0)
             {
-                address = $"{_activeHouse.District} {_activeHouse.Ward}/{_activeHouse.Plot} (Room: {_activeHouse.Room}) {_activeHouse.WorldName} [{_activeHouse.DataCenter}]";
+                address = $"{_stateService.CurrentHouse.District} {_stateService.CurrentHouse.Ward}/{_stateService.CurrentHouse.Plot} (Room: {_stateService.CurrentHouse.Room}) {_stateService.CurrentHouse.WorldName} [{_stateService.CurrentHouse.DataCenter}]";
             }
             
             VenueSync.Log.Information($"Set house location to {address}");
@@ -223,7 +232,10 @@ public class TerritoryWatcher: IDisposable
     private void LeftHouse()
     {
         _wasInHouse = false;
-        _activeHouse = new House();
+        _stateService.CurrentHouse = new House();
+        _stateService.VenueState = new VenueState() {
+            location = new VenueLocation()
+        };
         VenueSync.Log.Information("Player Left House");
     }
     

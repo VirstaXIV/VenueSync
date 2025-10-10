@@ -6,7 +6,11 @@ using Dalamud.Plugin;
 using OtterGui.Services;
 using OtterGui.Widgets;
 using VenueSync.Events;
+using VenueSync.Services;
+using VenueSync.Ui.Tabs.CharactersTab;
+using VenueSync.Ui.Tabs.HousesTab;
 using VenueSync.Ui.Tabs.SettingsTab;
+using VenueSync.Ui.Tabs.VenuesTab;
 
 namespace VenueSync.Ui;
 
@@ -22,27 +26,40 @@ public class MainWindow : Window, IDisposable
     public enum TabType
     {
         None = -1,
-        Settings = 0
+        Settings = 0,
+        Venues = 1,
+        Houses = 2,
+        Characters = 3
     }
 
     private readonly Configuration _configuration;
+    private readonly SocketService _socketService;
     private readonly TabSelected _event;
     private readonly MainWindowPosition _position;
-    private readonly ITab[] _tabs;
+    private ITab[] _tabs;
     
     public readonly SettingsTab Settings;
+    public readonly VenuesTab Venues;
+    public readonly HousesTab Houses;
+    public readonly CharactersTab Characters;
 
     public TabType SelectTab;
 
-    public MainWindow(IDalamudPluginInterface pluginInterface, Configuration configuration, SettingsTab settings, TabSelected @event, MainWindowPosition position) : base("VenueSyncMainWindow")
+    public MainWindow(IDalamudPluginInterface pluginInterface, Configuration configuration, 
+        SettingsTab settings, VenuesTab venueTab, CharactersTab charactersTab, HousesTab housesTab,
+        TabSelected @event, MainWindowPosition position, SocketService socketService) : base("VenueSyncMainWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
         SizeConstraints = new WindowSizeConstraints() {
-            MinimumSize = new Vector2(700, 675),
-            MaximumSize = ImGui.GetIO().DisplaySize,
+            MinimumSize = new Vector2(300, 400),
+            MaximumSize = new Vector2(400, 600),
         };
         Settings   = settings;
+        Venues = venueTab;
+        Houses = housesTab;
+        Characters = charactersTab;
         _configuration = configuration;
+        _socketService = socketService;
         _event = @event;
         _position = position;
         _tabs =
@@ -74,6 +91,22 @@ public class MainWindow : Window, IDisposable
         _position.Size = ImGui.GetWindowSize();
         _position.Position = ImGui.GetWindowPos();
 
+        if (!_socketService.Connected)
+        {
+            _tabs = [
+                Settings
+            ];
+        }
+        else
+        {
+            _tabs = [
+                Characters,
+                Houses,
+                Venues,
+                Settings
+            ];
+        }
+
         if (TabBar.Draw("##tabs", ImGuiTabBarFlags.None, ToLabel(SelectTab), out var currentTab, () => { }, _tabs))
             SelectTab = TabType.None;
         var tab = FromLabel(currentTab);
@@ -88,6 +121,9 @@ public class MainWindow : Window, IDisposable
     private ReadOnlySpan<byte> ToLabel(TabType type)
         => type switch {
             TabType.Settings => Settings.Label,
+            TabType.Characters => Characters.Label,
+            TabType.Houses => Houses.Label,
+            TabType.Venues => Venues.Label,
             _ => ReadOnlySpan<byte>.Empty,
         };
 
@@ -95,6 +131,9 @@ public class MainWindow : Window, IDisposable
     {
         // @formatter:off
         if (label == Settings.Label)   return TabType.Settings;
+        if (label == Characters.Label)   return TabType.Characters;
+        if (label == Houses.Label)   return TabType.Houses;
+        if (label == Venues.Label)   return TabType.Venues;
         // @formatter:on
         return TabType.None;
     }

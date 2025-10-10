@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Utility;
@@ -35,20 +36,39 @@ class VenueSyncHttpAuthenticator(string authEndpoint, Configuration configuratio
 public class SocketService: IDisposable
 {
     private readonly Configuration _configuration;
+    private readonly StateService _stateService;
+    private readonly AccountService _accountService;
+    
     private readonly VenueEntered _venueEntered;
+    private readonly ServiceConnected _serviceConnected;
     private Pusher? pusher { get; set; } = null;
     private Dictionary<string, Channel> _channels = new Dictionary<string, Channel>();
     
     public bool Connected = false;
     public bool WasConnected = false;
     public bool Loaded = false;
+    public int ReconnectAttempts = 0;
+    public bool ManualDisconnect = false;
 
     public string UserID = string.Empty;
     
-    public SocketService(Configuration configuration, VenueEntered @venueEntered)
+    public SocketService(Configuration configuration, StateService stateService, AccountService accountService, 
+        ServiceConnected @serviceConnected, VenueEntered @venueEntered)
     {
         _configuration = configuration;
+        _stateService = stateService;
+        _accountService = accountService;
+        
+        _serviceConnected = @serviceConnected;
         _venueEntered = @venueEntered;
+
+        if (_configuration.AutoConnect)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Connect();
+            });
+        }
     }
 
     private Pusher GetPusher()
@@ -115,15 +135,15 @@ public class SocketService: IDisposable
             channel.BindAll(Listener);
             _channels.Add(channelName, channel);
             
-            VenueSync.Log.Information($"Added channel: {channelName}");
+            VenueSync.Log.Information($"Added VenueSync channel");
         }
         catch (ChannelUnauthorizedException)
         {
-            VenueSync.Log.Warning($"Could not enter channel: {channelName}");
+            VenueSync.Log.Warning($"Could not enter VenueSync channel");
         }
         catch (Exception)
         {
-            VenueSync.Log.Warning($"Could not enter channel: {channelName}");
+            VenueSync.Log.Warning($"Could not enter VenueSync channel");
         }
     }
 
@@ -169,6 +189,12 @@ public class SocketService: IDisposable
             }
             WasConnected = false;
             VenueSync.Messager.NotificationMessage($"Disconnected from VenueSync Service.", NotificationType.Info);
+
+            if (!ManualDisconnect && !Connected)
+            {
+                VenueSync.Log.Information($"Reconnect triggered by {state}");
+                RunReconnects();
+            }
         }
     }
 
@@ -202,17 +228,35 @@ public class SocketService: IDisposable
             try
             {
                 VenueSync.Log.Information($"Trying to connect to service.");
-                await GetPusher().ConnectAsync().ConfigureAwait(false);
-
-                var userId = GetUserID();
-
-                if (!userId.IsNullOrEmpty())
+                var checkUser = await _accountService.User();
+                if (checkUser.Success)
                 {
-                    await AddChannel($"private-user.{userId}");
+                    await GetPusher().ConnectAsync().ConfigureAwait(false);
+                    
+                    var userId = GetUserID();
+
+                    if (!userId.IsNullOrEmpty())
+                    {
+                        await AddChannel($"private-user.{userId}");
+                        _stateService.Connection.Connected = true;
+                        _serviceConnected.Invoke();
+                    }
+                    else
+                    {
+                        VenueSync.Log.Warning($"No User ID was found.");
+                    }
+                    VenueSync.Log.Information($"Connected to service.");
                 }
                 else
                 {
-                    VenueSync.Log.Warning($"No User ID was found.");
+                    if (!checkUser.Graceful)
+                    {
+                        VenueSync.Log.Warning($"Failed to connect to VenueSync Service: {checkUser.ErrorMessage}");
+                    }
+                    else
+                    {
+                        VenueSync.Log.Information($"Failed to connect to VenueSync Service");
+                    }
                 }
             }
             catch (Exception ex)
@@ -226,8 +270,9 @@ public class SocketService: IDisposable
         }
     }
 
-    public async Task Disconnect()
+    public async Task Disconnect(bool manual = false)
     {
+        ManualDisconnect = manual;
         try
         {
             VenueSync.Log.Information($"Trying to disconnect from service.");
@@ -235,6 +280,8 @@ public class SocketService: IDisposable
             await GetPusher().UnsubscribeAllAsync().ConfigureAwait(false);
             _channels.Clear();
             await GetPusher().DisconnectAsync().ConfigureAwait(false);
+            _stateService.Connection.Connected = false;
+            VenueSync.Log.Information($"Disconnected from service.");
         }
         catch (Exception)
         {
@@ -250,5 +297,66 @@ public class SocketService: IDisposable
             GetPusher().ConnectionStateChanged -= ConnectionStateChanged;
             GetPusher().Error -= HandleError;
         });
+    }
+
+    private void RunReconnects()
+    {
+        CancellationToken cancellationToken = CancellationToken.None;
+        Task.Run(async () =>
+        {
+            if (ReconnectAttempts < 5)
+            {
+                const int maxAttempts = 5;
+                for (int i = 0; i < maxAttempts; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (await ForceResetConnection())
+                    {
+                        return;
+                    }
+
+                    await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(false);
+
+                    if (i == maxAttempts - 1)
+                    {
+                        VenueSync.Log.Error($"Too many reconnects attempts, manually reconnect or try again later.");
+                    }
+                }
+            }
+            else
+            {
+                VenueSync.Log.Error($"Too many reconnects attempts, manually reconnect or try again later.");
+            }
+        }, cancellationToken);
+    }
+
+    async private Task<bool> ForceResetConnection()
+    {
+        if (!Loaded) return false;
+        VenueSync.Log.Information("Reconnect called");
+
+        try
+        {
+            await Disconnect();
+            await Connect();
+
+            if (_stateService.Connection.Connected)
+            {
+                VenueSync.Log.Information("Reconnect completed successfully");
+                ReconnectAttempts = 0;
+
+                return true;
+            }
+        }
+        catch (Exception)
+        {
+            VenueSync.Log.Error("Failure during Reconnect, disconnecting");
+        }
+        
+        await Disconnect();
+        ReconnectAttempts += 1;
+        
+        return false;
     }
 }

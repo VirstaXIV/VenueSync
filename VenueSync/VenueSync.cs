@@ -37,7 +37,9 @@ public sealed class VenueSync : IDalamudPlugin
             _services.GetService<VenueSyncWindowSystem>();
             _services.GetService<CommandService>();
             _services.GetService<TerritoryWatcher>();
+            _services.GetService<PlayerWatcher>();
             _services.GetService<VenueService>();
+            _services.GetService<SocketService>();
             Log.Information($"VenueSync v{Version} loaded successfully.");
         }
         catch (Exception)

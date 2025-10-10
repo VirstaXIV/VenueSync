@@ -13,7 +13,7 @@ using VenueSync.Services;
 
 namespace VenueSync.Ui.Tabs.SettingsTab;
 
-public class SettingsTab(Configuration configuration, AccountService accountService, SocketService socketService): ITab
+public class SettingsTab(Configuration configuration, StateService stateService, AccountService accountService, SocketService socketService): ITab
 {
     private bool _currentlyRegistering = false;
     private bool _registered = false;
@@ -120,7 +120,7 @@ public class SettingsTab(Configuration configuration, AccountService accountServ
             
             ImUtf8.Text("Connect to the VenueSync Service"u8);
 
-            if (socketService.Connected)
+            if (stateService.Connection.Connected)
             {
                 ImGui.BeginDisabled(_isDisconnecting);
                 if (ImUtf8.Button("Disconnect from Service"u8))
@@ -130,7 +130,7 @@ public class SettingsTab(Configuration configuration, AccountService accountServ
                     {
                         try
                         {
-                            await socketService.Disconnect();
+                            await socketService.Disconnect(true);
                             _isDisconnecting = false;
                         }
                         catch (Exception)

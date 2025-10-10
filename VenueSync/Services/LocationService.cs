@@ -6,6 +6,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Utility;
+using VenueSync.Data.DTO.Locations;
+using VenueSync.State;
 
 namespace VenueSync.Services;
 
@@ -58,10 +60,14 @@ public class LocationService: IDisposable
                 ErrorMessage = "Cannot grab location without token."
             };
         }
+        _httpClient.DefaultRequestHeaders.Clear();
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _configuration.ServerToken);
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        Uri handshakeUri = new Uri(Configuration.Constants.LocationEndpoint);
-        var handshakePayload = new {
+        var ver = Assembly.GetExecutingAssembly().GetName().Version;
+        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("VenueSync", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
+
+        Uri locationUri = new Uri(Configuration.Constants.LocationEndpoint);
+        var locationPayload = new {
             district = house.District,
             plot = house.Plot,
             ward = house.Ward,
@@ -72,10 +78,10 @@ public class LocationService: IDisposable
             data_center = FormatDataCenter(house.DataCenter),
             house_id = house.HouseId
         };
-        var handshakeResponse = await _httpClient.PostAsJsonAsync(handshakeUri, handshakePayload, cancellationToken).ConfigureAwait(false);
-        handshakeResponse.EnsureSuccessStatusCode();
-        var location = await handshakeResponse.Content.ReadFromJsonAsync<SendLocationResponse>(cancellationToken: cancellationToken)
-                                              .ConfigureAwait(false);
+        var response = await _httpClient.PostAsJsonAsync(locationUri, locationPayload, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        var location = await response.Content.ReadFromJsonAsync<SendLocationResponse>(cancellationToken: cancellationToken)
+                                     .ConfigureAwait(false);
         if (location is null)
         {
             return new SendLocationReply() {
@@ -95,17 +101,5 @@ public class LocationService: IDisposable
         return new SendLocationReply() {
             Success = true
         };
-    }
-    
-    private sealed class SendLocationResponse
-    {
-        public bool success { get; set; } = false;
-    }
-    
-    public record SendLocationReply
-    {
-        public bool Success { get; set; } = false;
-        public bool Graceful { get; set; } = false;
-        public string? ErrorMessage { get; set; } = string.Empty;
     }
 }

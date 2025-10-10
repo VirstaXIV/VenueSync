@@ -7,7 +7,10 @@ using OtterGui.Services;
 using OtterGui.Log;
 using VenueSync.Events;
 using VenueSync.Ui;
+using VenueSync.Ui.Tabs.CharactersTab;
+using VenueSync.Ui.Tabs.HousesTab;
 using VenueSync.Ui.Tabs.SettingsTab;
+using VenueSync.Ui.Tabs.VenuesTab;
 
 namespace VenueSync.Services;
 
@@ -58,10 +61,12 @@ public static class ServiceProvider
                    .AddSingleton<SaveService>()
                    .AddSingleton<Configuration>()
                    .AddSingleton<EphemeralConfig>()
+                   .AddSingleton<StateService>()
                    .AddSingleton<CommandService>();
 
     private static ServiceManager AddEvents(this ServiceManager services)
         => services.AddSingleton<TabSelected>()
+                   .AddSingleton<ServiceConnected>()
                    .AddSingleton<VenueEntered>();
 
     private static ServiceManager AddApi(this ServiceManager services)
@@ -69,10 +74,14 @@ public static class ServiceProvider
                    .AddSingleton<SocketService>()
                    .AddSingleton<LocationService>()
                    .AddSingleton<TerritoryWatcher>()
+                   .AddSingleton<PlayerWatcher>()
                    .AddSingleton<VenueService>();
 
     private static ServiceManager AddUi(this ServiceManager services)
         => services.AddSingleton<SettingsTab>()
+                   .AddSingleton<VenuesTab>()
+                   .AddSingleton<HousesTab>()
+                   .AddSingleton<CharactersTab>()
                    .AddSingleton<MainWindowPosition>()
                    .AddSingleton<MainWindow>()
                    .AddSingleton<VenueSyncWindowSystem>();

@@ -10,15 +10,21 @@ using System.Threading.Tasks;
 using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Utility;
 using OtterGui.Classes;
+using VenueSync.Data.DTO.Account;
+using VenueSync.State;
 
 namespace VenueSync.Services;
 
 public class AccountService: IDisposable
 {
     private readonly HttpClient _httpClient;
+    private readonly Configuration _configuration;
+    private readonly StateService _stateService;
 
-    public AccountService()
+    public AccountService(Configuration configuration, StateService stateService)
     {
+        _configuration = configuration;
+        _stateService = stateService;
         _httpClient = new(
             new HttpClientHandler()
             {
@@ -26,8 +32,6 @@ public class AccountService: IDisposable
                 MaxAutomaticRedirections = 3
             }
         );
-        var ver = Assembly.GetExecutingAssembly().GetName().Version;
-        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("VenueSync", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
     }
     
     public void Dispose()
@@ -35,8 +39,12 @@ public class AccountService: IDisposable
         _httpClient.Dispose();
     }
 
-    public async Task<XIVAuthReply> XIVAuth(CancellationToken cancellationToken = default)
+    public async Task<XIVAuthVerification> XIVAuth(CancellationToken cancellationToken = default)
     {
+        _httpClient.DefaultRequestHeaders.Clear();
+        var ver = Assembly.GetExecutingAssembly().GetName().Version;
+        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("VenueSync", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
+        
         var sessionID = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).Replace('+', '-').Replace('/', '_').TrimEnd('=');
 
         Uri handshakeUri = new Uri(Configuration.Constants.XIVAuthEndpoint);
@@ -45,13 +53,13 @@ public class AccountService: IDisposable
         };
         var handshakeResponse = await _httpClient.PostAsJsonAsync(handshakeUri, handshakePayload, cancellationToken).ConfigureAwait(false);
         handshakeResponse.EnsureSuccessStatusCode();
-        var register = await handshakeResponse.Content.ReadFromJsonAsync<RegisterResponse>(cancellationToken: cancellationToken)
+        var register = await handshakeResponse.Content.ReadFromJsonAsync<XIVAuthRegisterResponse>(cancellationToken: cancellationToken)
                                               .ConfigureAwait(false);
         if (register is null || string.IsNullOrWhiteSpace(register.auth_url) ||
             string.IsNullOrWhiteSpace(register.poll_url))
         {
             VenueSync.Messager.NotificationMessage($"VenueSync Authentication Failed", NotificationType.Error);
-            return new XIVAuthReply() {
+            return new XIVAuthVerification() {
                 Success = false,
                 ErrorMessage = "Malformed registration response."
             };
@@ -67,7 +75,7 @@ public class AccountService: IDisposable
             if (resp.StatusCode == HttpStatusCode.Gone)
             {
                 VenueSync.Messager.NotificationMessage($"VenueSync Authentication Failed", NotificationType.Error);
-                return new XIVAuthReply() {
+                return new XIVAuthVerification() {
                     Success = false,
                     ErrorMessage = "Registration session expired. Please try again."
                 };
@@ -75,12 +83,12 @@ public class AccountService: IDisposable
 
             if (resp.StatusCode == HttpStatusCode.OK)
             {
-                var lastPoll = await resp.Content.ReadFromJsonAsync<PollResponse>(cancellationToken: cancellationToken).ConfigureAwait(false);
+                var lastPoll = await resp.Content.ReadFromJsonAsync<XIVAuthPollResponse>(cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 if (lastPoll?.status?.Equals("success", StringComparison.OrdinalIgnoreCase) == true)
                 {
                     VenueSync.Messager.NotificationMessage($"VenueSync Authentication Successful", NotificationType.Success);
-                    return new XIVAuthReply() {
+                    return new XIVAuthVerification() {
                         Success = true,
                         ErrorMessage = null,
                         UserID = lastPoll.user_id,
@@ -92,31 +100,57 @@ public class AccountService: IDisposable
         }
         
         VenueSync.Messager.NotificationMessage($"VenueSync Authentication Timed Out", NotificationType.Error);
-        return new XIVAuthReply() {
+        return new XIVAuthVerification() {
             Success = false,
             ErrorMessage = "Timed out waiting for authorisation. Please try again."
         };
     }
-
-    private sealed class RegisterResponse
+    
+    private bool HasAuthentication()
     {
-        public string auth_url { get; set; } = "";
-        public string poll_url { get; set; } = "";
+        return !_configuration.ServerToken.IsNullOrEmpty();
     }
     
-    private sealed class PollResponse
+    public async Task<UserReply> User(CancellationToken cancellationToken = default)
     {
-        public string status { get; set; } = "";
-        public string? user_id { get; set; } = "";
-        public string? token { get; set; }
+        if (!HasAuthentication())
+        {
+            return new UserReply() {
+                Success = false,
+                Graceful = true,
+                ErrorMessage = "Cannot grab user without token."
+            };
+        }
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _configuration.ServerToken);
+        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        var ver = Assembly.GetExecutingAssembly().GetName().Version;
+        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("VenueSync", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
         
-    }
-    
-    public record XIVAuthReply
-    {
-        public bool Success { get; set; } = false;
-        public string? ErrorMessage { get; set; } = string.Empty;
-        public string? UserID { get; set; } = string.Empty;
-        public string? Token { get; set; } = string.Empty;
+        Uri endpointUri = new Uri(Configuration.Constants.MeEndpoint);
+        var response = await _httpClient.GetAsync(endpointUri, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        var me = await response.Content.ReadFromJsonAsync<UserResponse>(cancellationToken: cancellationToken)
+                               .ConfigureAwait(false);
+        if (me is null)
+        {
+            VenueSync.Messager.NotificationMessage($"VenueSync Request Failed", NotificationType.Error);
+            return new UserReply() {
+                Success = false,
+                ErrorMessage = "Malformed user response."
+            };
+        }
+        
+        VenueSync.Log.Information($"Trying to set user state.");
+
+        _stateService.UserState = new UserState() {
+            venues = me.venues,
+            characters = me.characters,
+            houses = me.houses
+        };
+
+        return new UserReply() {
+            Success = true
+        };
     }
 }

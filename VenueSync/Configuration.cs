@@ -79,5 +79,6 @@ public class Configuration : IPluginConfiguration, ISavable
         public const int SOCKET_PORT = 8080;
         public const string SOCKET_SCHEME = "http";
         public const string LocationEndpoint = "https://venuesync.test/api/location/send";
+        public const string MeEndpoint = "https://venuesync.test/api/me";
     }
 }

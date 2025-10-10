@@ -5,15 +5,34 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="04e0d1f6-b001-4129-81da-8df351bd6ae4" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.gitmodules" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/OtterGui" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Services/VenueService.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Data/DTO/Account/User.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Data/DTO/Account/XIVAuthVerification.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Data/DTO/Locations/SendLocation.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Events/ServiceConnected.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Services/PlayerWatcher.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Services/StateService.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/State/ConnectionState.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/State/CurrentHouseState.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/State/PlayerState.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/State/UserState.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/State/VenueState.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/CharactersTab/CharactersTab.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/HousesTab/HousesTab.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/VenuesTab/VenuesTab.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.editorconfig" beforeDir="false" afterPath="$PROJECT_DIR$/.editorconfig" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync.sln" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync.sln" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Configuration.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Configuration.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Events/VenueEntered.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Events/VenueEntered.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Services/AccountService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/AccountService.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Services/LocationService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/LocationService.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Services/ServiceProvider.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/ServiceProvider.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Services/SocketService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/SocketService.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Services/TerritoryWatcher.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/TerritoryWatcher.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Services/VenueService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/VenueService.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/MainWindow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/MainWindow.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/Tabs/SettingsTab/SettingsTab.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/SettingsTab/SettingsTab.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/VenueSync.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/VenueSync.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/VenueSync.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/VenueSync.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/packages.lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/packages.lock.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,20 +45,21 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "VirstaXIV"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;VirstaXIV&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/VirstaXIV/VenueSync.git",
-    "accountId": "cf89994c-aace-41b0-8a35-57c1dac07659"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/VirstaXIV/VenueSync.git&quot;,
+    &quot;accountId&quot;: &quot;cf89994c-aace-41b0-8a35-57c1dac07659&quot;
   }
-}]]></component>
+}</component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/832f47f22e46475f894c1accca75d16612200/d3/5f922254/PusherOptions.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/9d5367d25de84545a2d1fd97884d528716200/00/d3625afe/ConnectionState.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/9d5367d25de84545a2d1fd97884d528716200/69/a4cde464/PusherOptions.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/9d5367d25de84545a2d1fd97884d528716200/6b/5ceba22a/OperationTimeoutException.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/9d5367d25de84545a2d1fd97884d528716200/b5/dd52c740/ChannelUnauthorizedException.cs" root0="FORCE_HIGHLIGHTING" />
@@ -47,24 +67,41 @@
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/81f3fd7e2b484961b4153548f07e2749cc67a3daa1b085b5e4fd7181484507a/NotificationType.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/bf75becd713b2a9776ec893c58f6b559a6e5f32bd05a13722c770c09c46c75/Util.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Configuration.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Data/DTO/Account/User.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Data/DTO/Account/XIVAuthVerification.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Data/DTO/Locations/SendLocation.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/EphemeralConfig.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Events/ServiceConnected.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Events/TabSelected.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Events/VenueEntered.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/AccountService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/CommandService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/LocationService.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/PlayerWatcher.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/SaveService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/SocketService.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/StateService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/TerritoryWatcher.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/VenueService.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/State/ConnectionState.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/State/CurrentHouseState.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/State/PlayerState.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/State/UserState.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/State/VenueState.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Ui/MainWindow.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Ui/Tabs/CharactersTab/CharactersTab.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Ui/Tabs/HousesTab/HousesTab.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Ui/Tabs/SettingsTab/SettingsTab.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Ui/Tabs/VenuesTab/VenuesTab.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Ui/VenueSyncWindowSystem.cs" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="KubernetesApiPersistence">{}</component>
   <component name="KubernetesApiProvider">{
   &quot;isMigrated&quot;: true
 }</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 3
 }</component>
@@ -73,23 +110,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Attach to Process.21352:ffxiv_dx11.executor": "Debug",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "XThreadsFramesViewSplitterKey": "0.64641744",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "debugger.stepping",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Attach to Process.21352:ffxiv_dx11.executor&quot;: &quot;Debug&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;XThreadsFramesViewSplitterKey&quot;: &quot;0.64641744&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.sourceCode.C#&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CidrLocalAttachDebugger.recentlyUsed">
       <recent name="com.jetbrains.rider.cpp.debugger.RiderCppLLDBDriverConfiguration" />
@@ -104,7 +141,7 @@
       <updated>1759958965748</updated>
       <workItem from="1759958967355" duration="2426000" />
       <workItem from="1759975586246" duration="68950000" />
-      <workItem from="1760073011508" duration="3826000" />
+      <workItem from="1760073011508" duration="37305000" />
     </task>
     <servers />
   </component>
