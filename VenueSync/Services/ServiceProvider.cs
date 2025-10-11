@@ -96,5 +96,7 @@ public static class ServiceProvider
                    .AddSingleton<MainWindow>()
                    .AddSingleton<VenueWindowPosition>()
                    .AddSingleton<VenueWindow>()
+                   .AddSingleton<HouseVerifyWindowPosition>()
+                   .AddSingleton<HouseVerifyWindow>()
                    .AddSingleton<VenueSyncWindowSystem>();
 }

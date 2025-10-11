@@ -1,6 +1,9 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
@@ -8,7 +11,9 @@ using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.ImGuiNotification;
+using Dalamud.Interface.Utility;
 using Dalamud.Utility;
+using Dalamud.Utility.Numerics;
 using OtterGui.Classes;
 using OtterGui.Text;
 using OtterGui.Widgets;
@@ -26,6 +31,8 @@ public class SettingsTab(Configuration configuration, StateService stateService,
     private string _userId = string.Empty;
     private bool _isConnecting = false;
     private bool _isDisconnecting = false;
+    
+    private bool _fileSelectError = false;
     
     public ReadOnlySpan<byte> Label => "Settings"u8;
 
@@ -177,27 +184,56 @@ public class SettingsTab(Configuration configuration, StateService stateService,
         if (!ImUtf8.CollapsingHeader("Files"u8))
             return;
 
-        var syncFolder = configuration.SyncFolder;
+        ImGui.SetNextItemWidth(150 * ImGuiHelpers.GlobalScale);
+        var defaultFolderName = @"C:\FFXIVVenueSync";
+        var syncFolder = configuration.SyncFolder == string.Empty ? defaultFolderName : configuration.SyncFolder;
         ImGui.InputText("Storage Folder##cache", ref syncFolder, 255, ImGuiInputTextFlags.ReadOnly);
         
         ImGui.SameLine();
+        
         if (ImUtf8.IconButton(FontAwesomeIcon.Folder))
         {
-            VenueSync.Log.Information("File button clicked");
-            fileDialogManager.OpenFolderDialog("Pick VenueSync Storage Folder", (success, path) =>
+            //TODO: Figure out the issue with opening a dialog
+            fileDialogManager.SaveFolderDialog("Pick VenueSync Storage Folder", defaultFolderName, (success, path) =>
             {
                 if (!success) return;
-                
+
                 var isOneDrive = path.Contains("onedrive", StringComparison.OrdinalIgnoreCase);
                 var isWritable = fileService.IsDirectoryWritable(path);
                 var isPenumbraDirectory = string.Equals(path.ToLowerInvariant(), ipcManager.Penumbra.ModDirectory?.ToLowerInvariant(), StringComparison.Ordinal);
+                
+                var cacheDirFiles = Directory.GetFiles(path, "*", SearchOption.AllDirectories);
+                var cacheSubDirs = Directory.GetDirectories(path);
+                
+                var otherFiles = cacheDirFiles.Any(f =>
+                                                       Path.GetFileNameWithoutExtension(f).Length != 40
+                                                       && !Path.GetExtension(f).Equals("tmp", StringComparison.OrdinalIgnoreCase)
+                                                       && !Path.GetExtension(f).Equals("blk", StringComparison.OrdinalIgnoreCase)
+                );
 
-                if (!string.IsNullOrEmpty(path) && Directory.Exists(path) && isWritable && !isOneDrive && !isPenumbraDirectory)
+                if (!otherFiles && cacheSubDirs.Select(f => Path.GetFileName(Path.TrimEndingDirectorySeparator(f))).Any(f => !f.Equals("subst", StringComparison.OrdinalIgnoreCase)))
                 {
+                    otherFiles = true;
+                }
+
+                var validPath = Regex.IsMatch(path, @"^(?:[a-zA-Z]:\\[\w\s\-\\]+?|\/(?:[\w\s\-\/])+?)$", RegexOptions.ECMAScript);
+
+                if (!string.IsNullOrEmpty(path) && Directory.Exists(path) && isWritable && !isOneDrive && !isPenumbraDirectory && !otherFiles && validPath)
+                {
+                    _fileSelectError = false;
                     configuration.SyncFolder = path;
                     configuration.Save();
                 }
+                else
+                {
+                    _fileSelectError = true;
+                }
             }, @"C:\");
+        }
+
+        if (_fileSelectError)
+        {
+            ImUtf8.Text("Invalid Path"u8, (uint)ImGuiColors.DalamudRed.GetHashCode());
         }
     }
 

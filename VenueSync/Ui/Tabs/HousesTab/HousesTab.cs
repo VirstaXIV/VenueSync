@@ -8,7 +8,7 @@ using VenueSync.State;
 
 namespace VenueSync.Ui.Tabs.HousesTab;
 
-public class HousesTab(StateService stateService): ITab
+public class HousesTab(StateService stateService, HouseVerifyWindow houseVerifyWindow): ITab
 {
     public ReadOnlySpan<byte> Label => "Houses"u8;
 
@@ -17,6 +17,11 @@ public class HousesTab(StateService stateService): ITab
         using var child = ImUtf8.Child("MainWindowChild"u8, default);
         if (!child)
             return;
+
+        if (ImUtf8.Button("Start House Verification"))
+        {
+            houseVerifyWindow.Toggle();
+        }
 
         using (ImUtf8.Child("HousesChild"u8, default))
         {

@@ -5,6 +5,7 @@ using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using VenueSync.Events;
 using VenueSync.State;
+using VenueSync.Ui;
 
 namespace VenueSync.Services;
 
@@ -15,6 +16,7 @@ public class TerritoryWatcher: IDisposable
     private readonly SocketService _socketService;
     private readonly StateService _stateService;
     private readonly LocationService _locationService;
+    private readonly HouseVerifyWindow _houseVerifyWindow;
     
     private readonly ServiceConnected _serviceConnected;
 
@@ -24,13 +26,14 @@ public class TerritoryWatcher: IDisposable
     private bool _running = false;
     
     public TerritoryWatcher(IFramework framework, IClientState clientState, SocketService socketService, StateService stateService, 
-        LocationService locationService, ServiceConnected @serviceConnected)
+        LocationService locationService, ServiceConnected @serviceConnected, HouseVerifyWindow houseVerifyWindow)
     {
         _framework = framework;
         _clientState = clientState;
         _socketService = socketService;
         _stateService = stateService;
         _locationService = locationService;
+        _houseVerifyWindow = houseVerifyWindow;
         
         _serviceConnected = @serviceConnected;
         
@@ -111,6 +114,9 @@ public class TerritoryWatcher: IDisposable
     private void OnLogout(int type, int code)
     {
         CurrentTerritory = 0;
+        _houseVerifyWindow._ownedHouseId = 0;
+        _houseVerifyWindow._ownedHousePlot = 0;
+        _houseVerifyWindow._ownedHouseWard = 0;
         LeftHouse();
     }
 
@@ -124,6 +130,10 @@ public class TerritoryWatcher: IDisposable
 
         try
         {
+            if (_houseVerifyWindow.IsOpen)
+            {
+                CheckOwnedHouse();
+            }
             if (_wasInHouse)
             {
                 try
@@ -189,6 +199,21 @@ public class TerritoryWatcher: IDisposable
                 }
             }
         });
+    }
+
+    private unsafe void CheckOwnedHouse()
+    {
+        var ownedHouse = HousingManager.GetOwnedHouseId(EstateType.PersonalEstate);
+        if (_houseVerifyWindow._ownedHouseId != (long)ownedHouse.Id && ownedHouse is { IsApartment: false, IsWorkshop: false })
+        { 
+            //Valid house?
+            var plot = ownedHouse.PlotIndex + 1;
+            var ward = ownedHouse.WardIndex + 1;
+            _houseVerifyWindow._ownedHouseId = (long)ownedHouse.Id;
+            _houseVerifyWindow._ownedHousePlot = plot;
+            _houseVerifyWindow._ownedHouseWard = ward;
+            VenueSync.Log.Information($"Checking House: ID: {ownedHouse.Id} P: {plot} W: {ward}");
+        }
     }
 
     private unsafe void SetCurrentHouse()

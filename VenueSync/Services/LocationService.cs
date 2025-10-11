@@ -102,4 +102,57 @@ public class LocationService: IDisposable
             Success = true
         };
     }
+    
+    public async Task<SendLocationReply> VerifyLocation(House house, CancellationToken cancellationToken = default)
+    {
+        if (!HasAuthentication())
+        {
+            return new SendLocationReply() {
+                Success = false,
+                Graceful = true,
+                ErrorMessage = "Cannot verify location without token."
+            };
+        }
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _configuration.ServerToken);
+        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        var ver = Assembly.GetExecutingAssembly().GetName().Version;
+        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("VenueSync", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
+
+        Uri locationUri = new Uri(Configuration.Constants.HouseVerifyEndpoint);
+        var locationPayload = new {
+            district = house.District,
+            plot = house.Plot,
+            ward = house.Ward,
+            room = house.Room,
+            world_id = house.WorldId,
+            size = house.Type,
+            world = FormatWorldName(house.WorldName),
+            data_center = FormatDataCenter(house.DataCenter),
+            house_id = house.HouseId
+        };
+        var response = await _httpClient.PostAsJsonAsync(locationUri, locationPayload, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        var location = await response.Content.ReadFromJsonAsync<SendLocationResponse>(cancellationToken: cancellationToken)
+                                     .ConfigureAwait(false);
+        if (location is null)
+        {
+            return new SendLocationReply() {
+                Success = false,
+                ErrorMessage = "Malformed Response"
+            };
+        }
+
+        if (!location.success)
+        {
+            return new SendLocationReply() {
+                Success = false,
+                ErrorMessage = "Location Request Failed."
+            };
+        }
+
+        return new SendLocationReply() {
+            Success = true
+        };
+    }
 }
