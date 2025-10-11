@@ -212,7 +212,7 @@ public class TerritoryWatcher: IDisposable
             _houseVerifyWindow._ownedHouseId = (long)ownedHouse.Id;
             _houseVerifyWindow._ownedHousePlot = plot;
             _houseVerifyWindow._ownedHouseWard = ward;
-            VenueSync.Log.Information($"Checking House: ID: {ownedHouse.Id} P: {plot} W: {ward}");
+            VenueSync.Log.Debug($"Checking House: ID: {ownedHouse.Id} P: {plot} W: {ward}");
         }
     }
 
@@ -242,7 +242,7 @@ public class TerritoryWatcher: IDisposable
                 address = $"{_stateService.CurrentHouse.District} {_stateService.CurrentHouse.Ward}/{_stateService.CurrentHouse.Plot} (Room: {_stateService.CurrentHouse.Room}) {_stateService.CurrentHouse.WorldName} [{_stateService.CurrentHouse.DataCenter}]";
             }
             
-            VenueSync.Log.Information($"Set house location to {address}");
+            VenueSync.Log.Debug($"Set house location to {address}");
             
             SendLocation();
         }
@@ -251,7 +251,7 @@ public class TerritoryWatcher: IDisposable
     private void EnteredHouse()
     {
         _wasInHouse = true;
-        VenueSync.Log.Information("Player Entered House");
+        VenueSync.Log.Debug("Player Entered House");
     }
     
     private void LeftHouse()
@@ -261,7 +261,7 @@ public class TerritoryWatcher: IDisposable
         _stateService.VenueState = new VenueState() {
             location = new VenueLocation()
         };
-        VenueSync.Log.Information("Player Left House");
+        VenueSync.Log.Debug("Player Left House");
     }
     
     public static string GetHouseType(ushort territory)

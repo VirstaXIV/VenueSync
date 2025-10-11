@@ -65,7 +65,7 @@ public class PlayerWatcher: IDisposable
             return;
         }
         
-        VenueSync.Log.Information($"Setting current player to {name} - {world} [{dataCenter}]");
+        VenueSync.Log.Debug($"Setting current player to {name} - {world} [{dataCenter}]");
         _stateService.PlayerState.name = name;
         _stateService.PlayerState.world = world;
         _stateService.PlayerState.data_center = dataCenter;

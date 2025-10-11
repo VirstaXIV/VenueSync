@@ -141,7 +141,7 @@ public class AccountService: IDisposable
             };
         }
         
-        VenueSync.Log.Information($"Trying to set user state.");
+        VenueSync.Log.Debug($"Trying to set user state.");
 
         _stateService.UserState = new UserState() {
             venues = me.venues,

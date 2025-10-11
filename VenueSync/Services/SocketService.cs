@@ -135,7 +135,7 @@ public class SocketService: IDisposable
             channel.BindAll(Listener);
             _channels.Add(channelName, channel);
             
-            VenueSync.Log.Information($"Added VenueSync channel");
+            VenueSync.Log.Debug($"Added VenueSync channel");
         }
         catch (ChannelUnauthorizedException)
         {
@@ -156,7 +156,7 @@ public class SocketService: IDisposable
             await GetPusher().UnsubscribeAsync(channelName).ConfigureAwait(false);
             _channels.Remove(channelName);
             
-            VenueSync.Log.Information($"Left channel: {channelName}");
+            VenueSync.Log.Debug($"Left channel: {channelName}");
         }
         catch (ChannelUnauthorizedException)
         {
@@ -192,7 +192,7 @@ public class SocketService: IDisposable
 
             if (!ManualDisconnect && !Connected)
             {
-                VenueSync.Log.Information($"Reconnect triggered by {state}");
+                VenueSync.Log.Debug($"Reconnect triggered by {state}");
                 RunReconnects();
             }
         }
@@ -218,7 +218,7 @@ public class SocketService: IDisposable
                 _venueEntered.Invoke(data);
             }
         }
-        VenueSync.Log.Information($"Got event: {eventName}");
+        VenueSync.Log.Debug($"Got event: {eventName}");
     }
 
     public async Task Connect()
@@ -227,7 +227,7 @@ public class SocketService: IDisposable
         {
             try
             {
-                VenueSync.Log.Information($"Trying to connect to service.");
+                VenueSync.Log.Debug($"Trying to connect to service.");
                 var checkUser = await _accountService.User();
                 if (checkUser.Success)
                 {
@@ -245,7 +245,7 @@ public class SocketService: IDisposable
                     {
                         VenueSync.Log.Warning($"No User ID was found.");
                     }
-                    VenueSync.Log.Information($"Connected to service.");
+                    VenueSync.Log.Debug($"Connected to service.");
                 }
                 else
                 {
@@ -255,7 +255,7 @@ public class SocketService: IDisposable
                     }
                     else
                     {
-                        VenueSync.Log.Information($"Failed to connect to VenueSync Service");
+                        VenueSync.Log.Debug($"Failed to connect to VenueSync Service");
                     }
                 }
             }
@@ -275,13 +275,13 @@ public class SocketService: IDisposable
         ManualDisconnect = manual;
         try
         {
-            VenueSync.Log.Information($"Trying to disconnect from service.");
+            VenueSync.Log.Debug($"Trying to disconnect from service.");
             GetPusher().UnbindAll();
             await GetPusher().UnsubscribeAllAsync().ConfigureAwait(false);
             _channels.Clear();
             await GetPusher().DisconnectAsync().ConfigureAwait(false);
             _stateService.Connection.Connected = false;
-            VenueSync.Log.Information($"Disconnected from service.");
+            VenueSync.Log.Debug($"Disconnected from service.");
         }
         catch (Exception)
         {
@@ -334,7 +334,7 @@ public class SocketService: IDisposable
     async private Task<bool> ForceResetConnection()
     {
         if (!Loaded) return false;
-        VenueSync.Log.Information("Reconnect called");
+        VenueSync.Log.Debug("Reconnect called");
 
         try
         {
@@ -343,7 +343,7 @@ public class SocketService: IDisposable
 
             if (_stateService.Connection.Connected)
             {
-                VenueSync.Log.Information("Reconnect completed successfully");
+                VenueSync.Log.Debug("Reconnect completed successfully");
                 ReconnectAttempts = 0;
 
                 return true;

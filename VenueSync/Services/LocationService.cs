@@ -103,7 +103,7 @@ public class LocationService: IDisposable
         };
     }
     
-    public async Task<SendLocationReply> VerifyLocation(House house, CancellationToken cancellationToken = default)
+    public async Task<SendLocationReply> VerifyLocation(string characterName, string lodestoneId, House house, CancellationToken cancellationToken = default)
     {
         if (!HasAuthentication())
         {
@@ -121,15 +121,15 @@ public class LocationService: IDisposable
 
         Uri locationUri = new Uri(Configuration.Constants.HouseVerifyEndpoint);
         var locationPayload = new {
+            character_name = characterName,
+            lodestone_id = lodestoneId,
             district = house.District,
             plot = house.Plot,
             ward = house.Ward,
-            room = house.Room,
-            world_id = house.WorldId,
             size = house.Type,
             world = FormatWorldName(house.WorldName),
             data_center = FormatDataCenter(house.DataCenter),
-            house_id = house.HouseId
+            ffxiv_id = house.HouseId
         };
         var response = await _httpClient.PostAsJsonAsync(locationUri, locationPayload, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
