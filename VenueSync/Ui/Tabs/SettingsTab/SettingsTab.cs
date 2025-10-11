@@ -1,9 +1,12 @@
 ﻿using System;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Colors;
+using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Utility;
 using OtterGui.Classes;
@@ -13,7 +16,8 @@ using VenueSync.Services;
 
 namespace VenueSync.Ui.Tabs.SettingsTab;
 
-public class SettingsTab(Configuration configuration, StateService stateService, AccountService accountService, SocketService socketService): ITab
+public class SettingsTab(Configuration configuration, StateService stateService, 
+    AccountService accountService, SocketService socketService, FileDialogManager fileDialogManager, FileService fileService, IPCManager ipcManager): ITab
 {
     private bool _currentlyRegistering = false;
     private bool _registered = false;
@@ -34,6 +38,7 @@ public class SettingsTab(Configuration configuration, StateService stateService,
         using (ImUtf8.Child("SettingsChild"u8, default))
         {
             DrawServiceSettings();
+            DrawFilesystemSettings();
             DrawInterfaceSettings();
         }
     }
@@ -164,6 +169,35 @@ public class SettingsTab(Configuration configuration, StateService stateService,
                 }
                 ImGui.EndDisabled();
             }
+        }
+    }
+
+    private void DrawFilesystemSettings()
+    {
+        if (!ImUtf8.CollapsingHeader("Files"u8))
+            return;
+
+        var syncFolder = configuration.SyncFolder;
+        ImGui.InputText("Storage Folder##cache", ref syncFolder, 255, ImGuiInputTextFlags.ReadOnly);
+        
+        ImGui.SameLine();
+        if (ImUtf8.IconButton(FontAwesomeIcon.Folder))
+        {
+            VenueSync.Log.Information("File button clicked");
+            fileDialogManager.OpenFolderDialog("Pick VenueSync Storage Folder", (success, path) =>
+            {
+                if (!success) return;
+                
+                var isOneDrive = path.Contains("onedrive", StringComparison.OrdinalIgnoreCase);
+                var isWritable = fileService.IsDirectoryWritable(path);
+                var isPenumbraDirectory = string.Equals(path.ToLowerInvariant(), ipcManager.Penumbra.ModDirectory?.ToLowerInvariant(), StringComparison.Ordinal);
+
+                if (!string.IsNullOrEmpty(path) && Directory.Exists(path) && isWritable && !isOneDrive && !isPenumbraDirectory)
+                {
+                    configuration.SyncFolder = path;
+                    configuration.Save();
+                }
+            }, @"C:\");
         }
     }
 

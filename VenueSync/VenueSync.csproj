@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OtterGui\OtterGui.csproj" />
+    <ProjectReference Include="..\Penumbra.Api\Penumbra.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

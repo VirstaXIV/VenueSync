@@ -18,6 +18,7 @@ public class Configuration : IPluginConfiguration, ISavable
     public string ServerUserID { get; set; } = string.Empty;
 
     public int Version { get; set; } = Constants.CurrentVersion;
+    public string SyncFolder { get; set; } = string.Empty;
 
     [JsonIgnore] private readonly SaveService _saveService;
 

@@ -6,33 +6,20 @@
   <component name="ChangeListManager">
     <list default="true" id="04e0d1f6-b001-4129-81da-8df351bd6ae4" name="Changes" comment="">
       <change afterPath="$PROJECT_DIR$/OtterGui" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Data/DTO/Account/User.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Data/DTO/Account/XIVAuthVerification.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Data/DTO/Locations/SendLocation.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Events/ServiceConnected.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Services/PlayerWatcher.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Services/StateService.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/State/ConnectionState.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/State/CurrentHouseState.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/State/PlayerState.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/State/UserState.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/State/VenueState.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/CharactersTab/CharactersTab.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/HousesTab/HousesTab.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/VenuesTab/VenuesTab.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.editorconfig" beforeDir="false" afterPath="$PROJECT_DIR$/.editorconfig" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Penumbra.Api" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Services/FileService.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Services/IPC/PenumbraIPC.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Services/IPCManager.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Ui/VenueWindow.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitmodules" beforeDir="false" afterPath="$PROJECT_DIR$/.gitmodules" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Configuration.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Configuration.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Events/VenueEntered.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Events/VenueEntered.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Services/AccountService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/AccountService.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Services/LocationService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/LocationService.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Services/ServiceProvider.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/ServiceProvider.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Services/SocketService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/SocketService.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Services/TerritoryWatcher.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/TerritoryWatcher.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Services/VenueService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/VenueService.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/MainWindow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/MainWindow.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/Tabs/CharactersTab/CharactersTab.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/CharactersTab/CharactersTab.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/Tabs/HousesTab/HousesTab.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/HousesTab/HousesTab.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Ui/Tabs/SettingsTab/SettingsTab.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/SettingsTab/SettingsTab.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/VenueSync.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/VenueSync.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/Tabs/VenuesTab/VenuesTab.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/VenuesTab/VenuesTab.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/VenueSyncWindowSystem.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/VenueSyncWindowSystem.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -76,6 +63,9 @@
     <setting file="file://$PROJECT_DIR$/VenueSync/Events/VenueEntered.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/AccountService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/CommandService.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/FileService.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/IPC/PenumbraIPC.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/IPCManager.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/LocationService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/PlayerWatcher.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/SaveService.cs" root0="FORCE_HIGHLIGHTING" />
@@ -94,6 +84,7 @@
     <setting file="file://$PROJECT_DIR$/VenueSync/Ui/Tabs/SettingsTab/SettingsTab.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Ui/Tabs/VenuesTab/VenuesTab.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Ui/VenueSyncWindowSystem.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Ui/VenueWindow.cs" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="KubernetesApiPersistence">{}</component>
   <component name="KubernetesApiProvider">{
@@ -141,7 +132,7 @@
       <updated>1759958965748</updated>
       <workItem from="1759958967355" duration="2426000" />
       <workItem from="1759975586246" duration="68950000" />
-      <workItem from="1760073011508" duration="37305000" />
+      <workItem from="1760073011508" duration="44458000" />
     </task>
     <servers />
   </component>

@@ -39,7 +39,7 @@ public class HousesTab(StateService stateService): ITab
 
     private void DrawHousesTable()
     {
-        if (ImGui.BeginTable("Houses", 2, ImGuiTableFlags.None))
+        if (ImGui.BeginTable("Houses", 2))
         {
             ImGui.TableSetupColumn("Name");
             ImGui.TableSetupColumn("Address");

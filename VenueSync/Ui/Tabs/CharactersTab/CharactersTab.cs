@@ -36,7 +36,7 @@ public class CharactersTab(StateService stateService): ITab
 
     private void DrawCharactersTable()
     {
-        if (ImGui.BeginTable("Characters", 4, ImGuiTableFlags.None))
+        if (ImGui.BeginTable("Characters", 4))
         {
             ImGui.TableSetupColumn("Is Main");
             ImGui.TableSetupColumn("Name");

@@ -1,11 +1,13 @@
 ﻿using Dalamud.Game.ClientState.Objects;
 using Dalamud.Interface.DragDrop;
+using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using OtterGui.Classes;
 using OtterGui.Services;
 using OtterGui.Log;
 using VenueSync.Events;
+using VenueSync.Services.IPC;
 using VenueSync.Ui;
 using VenueSync.Ui.Tabs.CharactersTab;
 using VenueSync.Ui.Tabs.HousesTab;
@@ -27,6 +29,7 @@ public static class ServiceProvider
                        .AddEvents()
                        .AddApi()
                        .AddUi()
+                       .AddIPC()
                        .AddExistingService(venueSync);
 
         services.CreateProvider();
@@ -36,6 +39,7 @@ public static class ServiceProvider
     private static ServiceManager AddDalamudServices(this ServiceManager services, IDalamudPluginInterface pluginInterface)
         => services.AddExistingService(pluginInterface)
                    .AddExistingService(pluginInterface.UiBuilder)
+                   .AddSingleton<FileDialogManager>()
                    .AddDalamudService<ICommandManager>(pluginInterface)
                    .AddDalamudService<IDataManager>(pluginInterface)
                    .AddDalamudService<IClientState>(pluginInterface)
@@ -62,7 +66,13 @@ public static class ServiceProvider
                    .AddSingleton<Configuration>()
                    .AddSingleton<EphemeralConfig>()
                    .AddSingleton<StateService>()
+                   .AddSingleton<FileService>()
+                   .AddSingleton<PluginWatcherService>()
                    .AddSingleton<CommandService>();
+    
+    private static ServiceManager AddIPC(this ServiceManager services)
+        => services.AddSingleton<PenumbraIPC>()
+                   .AddSingleton<IPCManager>();
 
     private static ServiceManager AddEvents(this ServiceManager services)
         => services.AddSingleton<TabSelected>()
@@ -84,5 +94,7 @@ public static class ServiceProvider
                    .AddSingleton<CharactersTab>()
                    .AddSingleton<MainWindowPosition>()
                    .AddSingleton<MainWindow>()
+                   .AddSingleton<VenueWindowPosition>()
+                   .AddSingleton<VenueWindow>()
                    .AddSingleton<VenueSyncWindowSystem>();
 }

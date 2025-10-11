@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VenueSync", "VenueSync\Venu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OtterGui", "OtterGui\OtterGui.csproj", "{498955D3-102C-4FCE-BF06-0558BF2C312A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Penumbra.Api", "Penumbra.Api\Penumbra.Api.csproj", "{69C9A6B9-BE47-4766-97C5-EADF74B28C60}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -25,6 +27,10 @@ Global
 		{498955D3-102C-4FCE-BF06-0558BF2C312A}.Debug|x64.Build.0 = Debug|x64
 		{498955D3-102C-4FCE-BF06-0558BF2C312A}.Release|x64.ActiveCfg = Release|x64
 		{498955D3-102C-4FCE-BF06-0558BF2C312A}.Release|x64.Build.0 = Release|x64
+		{69C9A6B9-BE47-4766-97C5-EADF74B28C60}.Debug|x64.ActiveCfg = Debug|x64
+		{69C9A6B9-BE47-4766-97C5-EADF74B28C60}.Debug|x64.Build.0 = Debug|x64
+		{69C9A6B9-BE47-4766-97C5-EADF74B28C60}.Release|x64.ActiveCfg = Release|x64
+		{69C9A6B9-BE47-4766-97C5-EADF74B28C60}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -10,11 +10,12 @@ public class VenueSyncWindowSystem: IDisposable
     private readonly IUiBuilder _uiBuilder;
     private readonly MainWindow _mainWindow;
 
-    public VenueSyncWindowSystem(IUiBuilder uiBuilder, MainWindow mainWindow)
+    public VenueSyncWindowSystem(IUiBuilder uiBuilder, MainWindow mainWindow, VenueWindow venueWindow)
     {
         _uiBuilder = uiBuilder;
         _mainWindow = mainWindow;
         _windowSystem.AddWindow(mainWindow);
+        _windowSystem.AddWindow(venueWindow);
         
         _uiBuilder.OpenMainUi += _mainWindow.Toggle;
         _uiBuilder.Draw += _windowSystem.Draw;

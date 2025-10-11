@@ -803,6 +803,9 @@
           "JetBrains.Annotations": "[2024.3.0, )",
           "Microsoft.Extensions.DependencyInjection": "[9.0.2, )"
         }
+      },
+      "penumbra.api": {
+        "type": "Project"
       }
     }
   }

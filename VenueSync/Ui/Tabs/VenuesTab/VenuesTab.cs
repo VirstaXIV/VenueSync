@@ -36,7 +36,7 @@ public class VenuesTab(StateService stateService): ITab
 
     private void DrawVenuesTable()
     {
-        if (ImGui.BeginTable("Venues", 1, ImGuiTableFlags.None))
+        if (ImGui.BeginTable("Venues", 1))
         {
             ImGui.TableSetupColumn("Name");
             ImGui.TableHeadersRow();
