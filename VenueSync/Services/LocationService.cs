@@ -19,12 +19,13 @@ public class LocationService: IDisposable
     public LocationService(Configuration configuration)
     {
         _configuration = configuration;
-        _httpClient = new(
+        _httpClient = new HttpClient(
             new HttpClientHandler()
             {
                 AllowAutoRedirect = false,
                 MaxAutomaticRedirections = 3
-            }
+            },
+            disposeHandler: false
         );
         var ver = Assembly.GetExecutingAssembly().GetName().Version;
         _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("VenueSync", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
@@ -78,23 +79,34 @@ public class LocationService: IDisposable
             data_center = FormatDataCenter(house.DataCenter),
             house_id = house.HouseId
         };
-        var response = await _httpClient.PostAsJsonAsync(locationUri, locationPayload, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        var location = await response.Content.ReadFromJsonAsync<SendLocationResponse>(cancellationToken: cancellationToken)
-                                     .ConfigureAwait(false);
-        if (location is null)
+        try
         {
-            return new SendLocationReply() {
-                Success = false,
-                ErrorMessage = "Malformed Response"
-            };
-        }
+            var response = await _httpClient.PostAsJsonAsync(locationUri, locationPayload, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var location = await response.Content.ReadFromJsonAsync<SendLocationResponse>(cancellationToken: cancellationToken)
+                                         .ConfigureAwait(false);
+            if (location is null)
+            {
+                return new SendLocationReply() {
+                    Success = false,
+                    ErrorMessage = "Malformed Response"
+                };
+            }
 
-        if (!location.success)
+            if (!location.success)
+            {
+                return new SendLocationReply() {
+                    Success = false,
+                    ErrorMessage = "Location Request Failed."
+                };
+            }
+        }
+        catch (Exception exception)
         {
+            VenueSync.Log.Debug($"HTTP Error: {exception.Message}");
             return new SendLocationReply() {
                 Success = false,
-                ErrorMessage = "Location Request Failed."
+                ErrorMessage = "Failed to communicate with location service."
             };
         }
 
@@ -103,11 +115,11 @@ public class LocationService: IDisposable
         };
     }
     
-    public async Task<SendLocationReply> VerifyLocation(string characterName, string lodestoneId, House house, CancellationToken cancellationToken = default)
+    public async Task<VerifyLocationReply> VerifyLocation(string characterName, string lodestoneId, House house, CancellationToken cancellationToken = default)
     {
         if (!HasAuthentication())
         {
-            return new SendLocationReply() {
+            return new VerifyLocationReply() {
                 Success = false,
                 Graceful = true,
                 ErrorMessage = "Cannot verify location without token."
@@ -131,27 +143,38 @@ public class LocationService: IDisposable
             data_center = FormatDataCenter(house.DataCenter),
             ffxiv_id = house.HouseId
         };
-        var response = await _httpClient.PostAsJsonAsync(locationUri, locationPayload, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        var location = await response.Content.ReadFromJsonAsync<SendLocationResponse>(cancellationToken: cancellationToken)
-                                     .ConfigureAwait(false);
-        if (location is null)
+        try
         {
-            return new SendLocationReply() {
+            var response = await _httpClient.PostAsJsonAsync(locationUri, locationPayload, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var location = await response.Content.ReadFromJsonAsync<VerifyLocationResponse>(cancellationToken: cancellationToken)
+                                         .ConfigureAwait(false);
+            if (location is null)
+            {
+                return new VerifyLocationReply() {
+                    Success = false,
+                    ErrorMessage = "Malformed Response"
+                };
+            }
+
+            if (!location.success)
+            {
+                return new VerifyLocationReply() {
+                    Success = false,
+                    ErrorMessage = location.message
+                };
+            }
+        }
+        catch (Exception exception)
+        {
+            VenueSync.Log.Debug($"HTTP Error: {exception.Message}");
+            return new VerifyLocationReply() {
                 Success = false,
-                ErrorMessage = "Malformed Response"
+                ErrorMessage = "Failed to communicate with verify service."
             };
         }
 
-        if (!location.success)
-        {
-            return new SendLocationReply() {
-                Success = false,
-                ErrorMessage = "Location Request Failed."
-            };
-        }
-
-        return new SendLocationReply() {
+        return new VerifyLocationReply() {
             Success = true
         };
     }

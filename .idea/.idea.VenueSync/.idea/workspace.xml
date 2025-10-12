@@ -6,20 +6,23 @@
   <component name="ChangeListManager">
     <list default="true" id="04e0d1f6-b001-4129-81da-8df351bd6ae4" name="Changes" comment="">
       <change afterPath="$PROJECT_DIR$/OtterGui" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Penumbra.Api" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Services/FileService.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Services/IPC/PenumbraIPC.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Services/IPCManager.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/VenueSync/Ui/VenueWindow.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Penumbra.GameData" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Data/DTO/Locations/VerifyLocation.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Services/MannequinWatcher.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/State/MannequinState.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Ui/ManageMannequinsWindow.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gitmodules" beforeDir="false" afterPath="$PROJECT_DIR$/.gitmodules" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Configuration.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Configuration.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync.sln" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync.sln" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Services/AccountService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/AccountService.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Services/LocationService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/LocationService.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Services/ServiceProvider.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/ServiceProvider.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Services/VenueService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/VenueService.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/Tabs/CharactersTab/CharactersTab.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/CharactersTab/CharactersTab.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Services/StateService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/StateService.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/State/UserState.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/State/UserState.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/HouseVerifyWindow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/HouseVerifyWindow.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/MainWindow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/MainWindow.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Ui/Tabs/HousesTab/HousesTab.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/HousesTab/HousesTab.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/Tabs/SettingsTab/SettingsTab.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/SettingsTab/SettingsTab.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/Tabs/VenuesTab/VenuesTab.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/VenuesTab/VenuesTab.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Ui/VenueSyncWindowSystem.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/VenueSyncWindowSystem.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/VenueSync.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/VenueSync.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,12 +54,16 @@
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/9d5367d25de84545a2d1fd97884d528716200/6b/5ceba22a/OperationTimeoutException.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/9d5367d25de84545a2d1fd97884d528716200/b5/dd52c740/ChannelUnauthorizedException.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/9d5367d25de84545a2d1fd97884d528716200/cc/10108411/ChannelAuthorizationFailureException.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/1bf2efbabfdad3b42eb5b11c7fc46345c7ae41e1c67a8d7eae38c1dcd7db53/FileDialogManager.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/2c4747e6ad9391014deb7ff4d1dd63c425c6bc6792ec3311d5082664423e5c8/Inspect.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/40e3ea2d8f6030e41cf0aaf9c9cd52eb7e2b81f68b5ecc9cdcfda29c3bd5e/UIState.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/81f3fd7e2b484961b4153548f07e2749cc67a3daa1b085b5e4fd7181484507a/NotificationType.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/bf75becd713b2a9776ec893c58f6b559a6e5f32bd05a13722c770c09c46c75/Util.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Configuration.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Data/DTO/Account/User.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Data/DTO/Account/XIVAuthVerification.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Data/DTO/Locations/SendLocation.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Data/DTO/Locations/VerifyLocation.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/EphemeralConfig.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Events/ServiceConnected.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Events/TabSelected.cs" root0="FORCE_HIGHLIGHTING" />
@@ -67,7 +74,9 @@
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/IPC/PenumbraIPC.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/IPCManager.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/LocationService.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/MannequinWatcher.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/PlayerWatcher.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Services/PluginWatcherService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/SaveService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/SocketService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/StateService.cs" root0="FORCE_HIGHLIGHTING" />
@@ -75,10 +84,13 @@
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/VenueService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/State/ConnectionState.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/State/CurrentHouseState.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/State/MannequinState.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/State/PlayerState.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/State/UserState.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/State/VenueState.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Ui/HouseVerifyWindow.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Ui/MainWindow.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Ui/ManageMannequinsWindow.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Ui/Tabs/CharactersTab/CharactersTab.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Ui/Tabs/HousesTab/HousesTab.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Ui/Tabs/SettingsTab/SettingsTab.cs" root0="FORCE_HIGHLIGHTING" />
@@ -132,7 +144,7 @@
       <updated>1759958965748</updated>
       <workItem from="1759958967355" duration="2426000" />
       <workItem from="1759975586246" duration="68950000" />
-      <workItem from="1760073011508" duration="44458000" />
+      <workItem from="1760073011508" duration="80060000" />
     </task>
     <servers />
   </component>

@@ -13,6 +13,7 @@ public record UserVenueItem
 public record UserHouseItem
 {
     public string type { get; init; } = "";
+    public string owner { get; init; } = "";
     public string name { get; init; } = "";
     public string district { get; init; } = "";
     public int ward { get; init; } = 0;
@@ -20,6 +21,8 @@ public record UserHouseItem
     public string size { get; init; } = "";
     public string world { get; init; } = "";
     public string data_center { get; init; } = "";
+    public bool verified { get; init; } = false;
+    public bool perms { get; init; } = false;
 }
 
 public record UserCharacterItem

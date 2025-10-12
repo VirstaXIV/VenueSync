@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OtterGui", "OtterGui\OtterG
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Penumbra.Api", "Penumbra.Api\Penumbra.Api.csproj", "{69C9A6B9-BE47-4766-97C5-EADF74B28C60}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Penumbra.GameData", "Penumbra.GameData\Penumbra.GameData.csproj", "{4630A975-2725-4394-ABCA-82DF3B147975}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Penumbra.String", "Penumbra.String\Penumbra.String.csproj", "{953D98C3-C337-443A-BEB7-9918A52CCA68}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +35,14 @@ Global
 		{69C9A6B9-BE47-4766-97C5-EADF74B28C60}.Debug|x64.Build.0 = Debug|x64
 		{69C9A6B9-BE47-4766-97C5-EADF74B28C60}.Release|x64.ActiveCfg = Release|x64
 		{69C9A6B9-BE47-4766-97C5-EADF74B28C60}.Release|x64.Build.0 = Release|x64
+		{4630A975-2725-4394-ABCA-82DF3B147975}.Debug|x64.ActiveCfg = Debug|x64
+		{4630A975-2725-4394-ABCA-82DF3B147975}.Debug|x64.Build.0 = Debug|x64
+		{4630A975-2725-4394-ABCA-82DF3B147975}.Release|x64.ActiveCfg = Release|x64
+		{4630A975-2725-4394-ABCA-82DF3B147975}.Release|x64.Build.0 = Release|x64
+		{953D98C3-C337-443A-BEB7-9918A52CCA68}.Debug|x64.ActiveCfg = Debug|x64
+		{953D98C3-C337-443A-BEB7-9918A52CCA68}.Debug|x64.Build.0 = Debug|x64
+		{953D98C3-C337-443A-BEB7-9918A52CCA68}.Release|x64.ActiveCfg = Release|x64
+		{953D98C3-C337-443A-BEB7-9918A52CCA68}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

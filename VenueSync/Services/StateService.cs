@@ -11,6 +11,7 @@ public class StateService: IDisposable
     public required PlayerState PlayerState { get; set; }
     public required VenueState VenueState { get; set; }
     public required House CurrentHouse { get; set; }
+    public required Mannequin ActiveMannequin { get; set; }
     
     public StateService()
     {
@@ -51,5 +52,6 @@ public class StateService: IDisposable
             location = new VenueLocation()
         };
         CurrentHouse = new House();
+        ActiveMannequin = new Mannequin();
     }
 }

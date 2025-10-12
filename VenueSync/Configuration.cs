@@ -82,5 +82,6 @@ public class Configuration : IPluginConfiguration, ISavable
         public const string LocationEndpoint = "https://venuesync.test/api/location/send";
         public const string HouseVerifyEndpoint = "https://venuesync.test/api/location/verify";
         public const string MeEndpoint = "https://venuesync.test/api/me";
+        public const string MannequinEndpoint = "https://venuesync.test/api/mannequin/update";
     }
 }

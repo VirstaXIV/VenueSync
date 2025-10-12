@@ -3,9 +3,14 @@ using Dalamud.Interface.DragDrop;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using Microsoft.Extensions.DependencyInjection;
 using OtterGui.Classes;
 using OtterGui.Services;
 using OtterGui.Log;
+using Penumbra.GameData.Actors;
+using Penumbra.GameData.Data;
+using Penumbra.GameData.DataContainers;
+using Penumbra.GameData.Interop;
 using VenueSync.Events;
 using VenueSync.Services.IPC;
 using VenueSync.Ui;
@@ -27,6 +32,7 @@ public static class ServiceProvider
                        .AddDalamudServices(pluginInterface)
                        .AddMeta()
                        .AddEvents()
+                       .AddInterop()
                        .AddApi()
                        .AddUi()
                        .AddIPC()
@@ -78,11 +84,26 @@ public static class ServiceProvider
         => services.AddSingleton<TabSelected>()
                    .AddSingleton<ServiceConnected>()
                    .AddSingleton<VenueEntered>();
+    
+    private static ServiceManager AddInterop(this ServiceManager services)
+        => services.AddSingleton<NameDicts>()
+                   .AddSingleton<DictWorld>()
+                   .AddSingleton<DictMount>()
+                   .AddSingleton<DictCompanion>()
+                   .AddSingleton<DictOrnament>()
+                   .AddSingleton<DictBNpc>()
+                   .AddSingleton<DictENpc>()
+                   .AddSingleton(p => new CutsceneResolver(p.GetRequiredService<PenumbraIPC>().CutsceneParent))
+                   .AddSingleton<ActorManager>()
+                   .AddSingleton<ObjectManager>()
+                   .AddSingleton<ActorObjectManager>();
+
 
     private static ServiceManager AddApi(this ServiceManager services)
         => services.AddSingleton<AccountService>()
                    .AddSingleton<SocketService>()
                    .AddSingleton<LocationService>()
+                   .AddSingleton<MannequinService>()
                    .AddSingleton<TerritoryWatcher>()
                    .AddSingleton<PlayerWatcher>()
                    .AddSingleton<VenueService>();
@@ -98,5 +119,7 @@ public static class ServiceProvider
                    .AddSingleton<VenueWindow>()
                    .AddSingleton<HouseVerifyWindowPosition>()
                    .AddSingleton<HouseVerifyWindow>()
+                   .AddSingleton<ManageMannequinsWindowPosition>()
+                   .AddSingleton<ManageMannequinsWindow>()
                    .AddSingleton<VenueSyncWindowSystem>();
 }

@@ -25,12 +25,13 @@ public class AccountService: IDisposable
     {
         _configuration = configuration;
         _stateService = stateService;
-        _httpClient = new(
+        _httpClient = new HttpClient(
             new HttpClientHandler()
             {
                 AllowAutoRedirect = false,
                 MaxAutomaticRedirections = 3
-            }
+            },
+            disposeHandler: false
         );
     }
     
@@ -128,26 +129,37 @@ public class AccountService: IDisposable
         _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("VenueSync", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
         
         Uri endpointUri = new Uri(Configuration.Constants.MeEndpoint);
-        var response = await _httpClient.GetAsync(endpointUri, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        var me = await response.Content.ReadFromJsonAsync<UserResponse>(cancellationToken: cancellationToken)
-                               .ConfigureAwait(false);
-        if (me is null)
+        try
         {
-            VenueSync.Messager.NotificationMessage($"VenueSync Request Failed", NotificationType.Error);
-            return new UserReply() {
-                Success = false,
-                ErrorMessage = "Malformed user response."
+            var response = await _httpClient.GetAsync(endpointUri, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var me = await response.Content.ReadFromJsonAsync<UserResponse>(cancellationToken: cancellationToken)
+                                   .ConfigureAwait(false);
+            if (me is null)
+            {
+                VenueSync.Messager.NotificationMessage($"VenueSync Request Failed", NotificationType.Error);
+                return new UserReply() {
+                    Success = false,
+                    ErrorMessage = "Malformed user response."
+                };
+            }
+
+            VenueSync.Log.Debug($"Trying to set user state.");
+
+            _stateService.UserState = new UserState() {
+                venues = me.venues,
+                characters = me.characters,
+                houses = me.houses
             };
         }
-        
-        VenueSync.Log.Debug($"Trying to set user state.");
-
-        _stateService.UserState = new UserState() {
-            venues = me.venues,
-            characters = me.characters,
-            houses = me.houses
-        };
+        catch (Exception exception)
+        {
+            VenueSync.Log.Debug($"HTTP Error: {exception.Message}");
+            return new UserReply() {
+                Success = false,
+                ErrorMessage = "Failed to communicate with service"
+            };
+        }
 
         return new UserReply() {
             Success = true

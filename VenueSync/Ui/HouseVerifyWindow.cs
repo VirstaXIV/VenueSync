@@ -22,6 +22,7 @@ public class HouseVerifyWindow : Window, IDisposable
 {
     private readonly Configuration _configuration;
     private readonly StateService _stateService;
+    private readonly AccountService _accountService;
     private readonly LocationService _locationService;
     private readonly HouseVerifyWindowPosition _position;
     
@@ -29,8 +30,10 @@ public class HouseVerifyWindow : Window, IDisposable
     public int _ownedHousePlot = 0;
     public int _ownedHouseWard = 0;
     
+    private bool _isVerifying = false;
+    
     public HouseVerifyWindow(IDalamudPluginInterface pluginInterface, Configuration configuration, 
-        StateService stateService, HouseVerifyWindowPosition position, LocationService locationService) : base("VenueSyncHouseVerifyWindow")
+        StateService stateService, HouseVerifyWindowPosition position, LocationService locationService, AccountService accountService) : base("VenueSyncHouseVerifyWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
         SizeConstraints = new WindowSizeConstraints() {
@@ -39,6 +42,7 @@ public class HouseVerifyWindow : Window, IDisposable
         };
         _configuration = configuration;
         _stateService = stateService;
+        _accountService = accountService;
         _locationService = locationService;
         _position = position;
     }
@@ -116,21 +120,44 @@ public class HouseVerifyWindow : Window, IDisposable
         ImGui.Spacing();
         if (_ownedHouseId == _stateService.CurrentHouse.HouseId)
         {
+            ImGui.BeginDisabled(_isVerifying);
             if (ImGui.Button("Verify"))
             {
+                _isVerifying = true;
                 VenueSync.Log.Debug("Verifying house");
                 _ = Task.Run(async () =>
                 {
                     var reply = await _locationService.VerifyLocation(characterName, lodestoneId, _stateService.CurrentHouse);
                     if (reply is { Success: false, Graceful: false })
                     {
-                        VenueSync.Log.Warning("Failed to verify location.");
+                        VenueSync.Log.Warning($"Failed to verify location: {reply.ErrorMessage}");
+                        
+                        _isVerifying = false;
                     }
                     else
                     {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await _accountService.User();
+                            }
+                            catch (Exception ex)
+                            {
+                                VenueSync.Log.Warning($"Failed to update user state: {ex.Message}");
+                            }
+                            
+                            _isVerifying = false;
+                        });
                         VenueSync.Log.Debug("House verified.");
                     }
                 });
+            }
+            ImGui.EndDisabled();
+
+            if (_isVerifying)
+            {
+                ImGui.TextUnformatted("Submitting house for verification...");
             }
         }
         else

@@ -51,8 +51,8 @@ public class MainWindow : Window, IDisposable
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
         SizeConstraints = new WindowSizeConstraints() {
-            MinimumSize = new Vector2(300, 400),
-            MaximumSize = new Vector2(400, 600),
+            MinimumSize = new Vector2(600, 400),
+            MaximumSize = new Vector2(600, 400),
         };
         Settings   = settings;
         Venues = venueTab;
