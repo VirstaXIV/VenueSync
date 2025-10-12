@@ -85,14 +85,13 @@ public class ManageMannequinsWindow : Window, IDisposable
                     var mannequinToUpdate = mannequin.Value;
                     _ = Task.Run(async () =>
                     {
-                        //mannequinToUpdate
                         var mannequinData = new Mannequin() {
                             ffxiv_id = _stateService.CurrentHouse.HouseId,
                             name = mannequinToUpdate.Label,
                             world = _stateService.PlayerState.world,
                             data_center = _stateService.PlayerState.data_center,
                         };
-                        VenueSync.Log.Debug($"Mannequin Data: {mannequinData.ffxiv_id} {mannequinData.name} {mannequinData.world} {mannequinData.data_center}");
+                       
                         var reply = await _mannequinService.UpdateMannequin(mannequinData);
                         if (reply.Success)
                         {

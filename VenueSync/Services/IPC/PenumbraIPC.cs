@@ -1,6 +1,5 @@
 using System;
 using Dalamud.Plugin;
-using Penumbra.Api.Enums;
 using Penumbra.Api.Helpers;
 using Penumbra.Api.IpcSubscribers;
 
@@ -32,8 +31,8 @@ public class PenumbraIPC: IDisposable
         }
     }
     
-    private bool _pluginLoaded;
-    private Version _pluginVersion;
+    private readonly bool _pluginLoaded;
+    private readonly Version _pluginVersion;
     
     public PenumbraIPC(IDalamudPluginInterface pluginInterface)
     {
@@ -53,14 +52,7 @@ public class PenumbraIPC: IDisposable
     
     public void CheckModDirectory()
     {
-        if (!IsAvailable)
-        {
-            ModDirectory = string.Empty;
-        }
-        else
-        {
-            ModDirectory = _penumbraResolveModDir!.Invoke().ToLowerInvariant();
-        }
+        ModDirectory = !IsAvailable ? string.Empty : _penumbraResolveModDir!.Invoke().ToLowerInvariant();
     }
 
     public void PenumbraInit()
@@ -105,15 +97,16 @@ public class PenumbraIPC: IDisposable
 
     public void Dispose()
     {
-        
+        PenumbraDispose();
     }
     
     private void PenumbraDispose()
     {
-        if (IsAvailable)
+        if (!IsAvailable)
         {
-            _checkCutsceneParent = null;
-            IsAvailable = false;
+            return;
         }
+        _checkCutsceneParent = null;
+        IsAvailable = false;
     }
 }

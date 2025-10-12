@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OtterGui.Classes;
 using OtterGui.Services;
 using OtterGui.Log;
+using Penumbra.Api.IpcSubscribers;
 using Penumbra.GameData.Actors;
 using Penumbra.GameData.Data;
 using Penumbra.GameData.DataContainers;
@@ -83,7 +84,8 @@ public static class ServiceProvider
     private static ServiceManager AddEvents(this ServiceManager services)
         => services.AddSingleton<TabSelected>()
                    .AddSingleton<ServiceConnected>()
-                   .AddSingleton<VenueEntered>();
+                   .AddSingleton<VenueEntered>()
+                   .AddSingleton<VenueExited>();
     
     private static ServiceManager AddInterop(this ServiceManager services)
         => services.AddSingleton<NameDicts>()

@@ -4,12 +4,6 @@ using VenueSync.State;
 
 namespace VenueSync.Events;
 
-public class VenueData
-{
-    public string id { get; set; } = "";
-    public string name { get; set; } = "";
-}
-
 public class VenueEnteredData
 {
     public required VenueData venue { get; set; }

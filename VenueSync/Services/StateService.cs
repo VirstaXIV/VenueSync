@@ -49,7 +49,9 @@ public class StateService: IDisposable
         };
         PlayerState = new PlayerState();
         VenueState = new VenueState() {
-            location = new VenueLocation()
+            location = new VenueLocation() {
+                mannequins = [],
+            }
         };
         CurrentHouse = new House();
         ActiveMannequin = new Mannequin();

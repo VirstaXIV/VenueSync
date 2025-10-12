@@ -2,6 +2,12 @@ using System.Collections.Generic;
 
 namespace VenueSync.State;
 
+public record UserHouseMannequinItem
+{
+    public string id { get; set; } = "";
+    public string name { get; init; } = "";
+}
+
 public record UserVenueItem
 {
     public string id { get; set; } = "";
@@ -23,6 +29,7 @@ public record UserHouseItem
     public string data_center { get; init; } = "";
     public bool verified { get; init; } = false;
     public bool perms { get; init; } = false;
+    public List<UserHouseMannequinItem> mannequins { get; set; } = [];
 }
 
 public record UserCharacterItem

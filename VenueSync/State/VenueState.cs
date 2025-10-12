@@ -1,4 +1,18 @@
+using System.Collections.Generic;
+
 namespace VenueSync.State;
+
+public record VenueData
+{
+    public string id { get; set; } = "";
+    public string name { get; set; } = "";
+}
+
+public record MannequinItem
+{
+    public string id { get; set; } = "";
+    public string name { get; init; } = "";
+}
 
 public record VenueLocation
 {
@@ -11,6 +25,7 @@ public record VenueLocation
     public string size { get; set; } = "";
     public string world { get; set; } = "";
     public string data_center { get; set; } = "";
+    public List<MannequinItem> mannequins { get; init; } = [];
 }
 
 public record VenueState

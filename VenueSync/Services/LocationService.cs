@@ -77,7 +77,7 @@ public class LocationService: IDisposable
             size = house.Type,
             world = FormatWorldName(house.WorldName),
             data_center = FormatDataCenter(house.DataCenter),
-            house_id = house.HouseId
+            ffxiv_id = house.HouseId
         };
         try
         {

@@ -19,6 +19,7 @@ public class TerritoryWatcher: IDisposable
     private readonly HouseVerifyWindow _houseVerifyWindow;
     
     private readonly ServiceConnected _serviceConnected;
+    private readonly VenueExited _venueExited;
 
     private bool _isInHouse = false;
     private bool _wasInHouse = false;
@@ -26,7 +27,7 @@ public class TerritoryWatcher: IDisposable
     private bool _running = false;
     
     public TerritoryWatcher(IFramework framework, IClientState clientState, SocketService socketService, StateService stateService, 
-        LocationService locationService, ServiceConnected @serviceConnected, HouseVerifyWindow houseVerifyWindow)
+        LocationService locationService, ServiceConnected @serviceConnected, VenueExited @venueExited, HouseVerifyWindow houseVerifyWindow)
     {
         _framework = framework;
         _clientState = clientState;
@@ -36,6 +37,7 @@ public class TerritoryWatcher: IDisposable
         _houseVerifyWindow = houseVerifyWindow;
         
         _serviceConnected = @serviceConnected;
+        _venueExited = @venueExited;
         
         _serviceConnected.Subscribe(OnConnection, ServiceConnected.Priority.None);
         
@@ -146,9 +148,9 @@ public class TerritoryWatcher: IDisposable
                 }
             }
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            VenueSync.Log.Error("VenueSync Failed during framework update (territory)");
+            VenueSync.Log.Error($"VenueSync Failed during framework update (territory): {exception.Message}");
         }
         
         _running = false;
@@ -259,8 +261,11 @@ public class TerritoryWatcher: IDisposable
         _wasInHouse = false;
         _stateService.CurrentHouse = new House();
         _stateService.VenueState = new VenueState() {
-            location = new VenueLocation()
+            location = new VenueLocation() {
+                mannequins = []
+            }
         };
+        _venueExited.Invoke();
         VenueSync.Log.Debug("Player Left House");
     }
     
