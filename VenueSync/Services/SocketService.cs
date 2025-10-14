@@ -35,14 +35,18 @@ class VenueSyncHttpAuthenticator(string authEndpoint, Configuration configuratio
 
 public class SocketService: IDisposable
 {
+    private readonly GameStateService _gameStateService;
     private readonly Configuration _configuration;
     private readonly StateService _stateService;
     private readonly AccountService _accountService;
     
     private readonly VenueEntered _venueEntered;
     private readonly ServiceConnected _serviceConnected;
+    private readonly LoggedIn _loggedIn;
+    private readonly LoggedOut _loggedOut;
     private Pusher? pusher { get; set; } = null;
     private Dictionary<string, Channel> _channels = new Dictionary<string, Channel>();
+    private bool _shouldConnect = false;
     
     public bool Connected = false;
     public bool WasConnected = false;
@@ -50,25 +54,49 @@ public class SocketService: IDisposable
     public int ReconnectAttempts = 0;
     public bool ManualDisconnect = false;
 
-    public string UserID = string.Empty;
-    
-    public SocketService(Configuration configuration, StateService stateService, AccountService accountService, 
-        ServiceConnected @serviceConnected, VenueEntered @venueEntered)
+    public SocketService(
+        Configuration configuration, GameStateService gameStateService,
+        StateService stateService, AccountService accountService,
+        ServiceConnected @serviceConnected, VenueEntered @venueEntered, LoggedIn @loggedIn, LoggedOut @loggedOut)
     {
+        _gameStateService = gameStateService;
         _configuration = configuration;
         _stateService = stateService;
         _accountService = accountService;
-        
+
         _serviceConnected = @serviceConnected;
         _venueEntered = @venueEntered;
+        _loggedIn = @loggedIn;
+        _loggedOut = @loggedOut;
 
         if (_configuration.AutoConnect)
         {
-            _ = Task.Run(async () =>
-            {
-                await Connect();
-            });
+            _shouldConnect = true;
         }
+
+        _loggedIn.Subscribe(OnLoggedIn, LoggedIn.Priority.High);
+        _loggedOut.Subscribe(OnLoggedOut, LoggedOut.Priority.High);
+    }
+
+    private void OnLoggedIn()
+    {
+        VenueSync.Log.Debug($"Checking to auto connect on login.");
+        _ = Task.Run(async () => await _gameStateService.RunOnFrameworkThread(() =>
+            {
+                if (_shouldConnect)
+                {
+                    VenueSync.Log.Debug("Running Auto connect");
+                    _shouldConnect = false;
+                    _ = Task.Run(async () => await Connect());
+                }
+            }).ConfigureAwait(false)
+        );
+    }
+
+    private void OnLoggedOut()
+    {
+        VenueSync.Log.Debug($"Logging out, clearing connection.");
+        _ = Task.Run(async () => await Disconnect());
     }
 
     private Pusher GetPusher()
@@ -98,8 +126,8 @@ public class SocketService: IDisposable
         
         return pusher;
     }
-    
-    void HandleError(object sender, PusherException error)
+
+    private void HandleError(object sender, PusherException error)
     {
         if (error is ChannelUnauthorizedException unauthorizedAccess)
         {
@@ -127,7 +155,7 @@ public class SocketService: IDisposable
         }
     }
 
-    public async Task AddChannel(string channelName)
+    async private Task AddChannel(string channelName)
     {
         try
         {

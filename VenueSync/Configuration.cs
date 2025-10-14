@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Dalamud.Configuration;
 using Newtonsoft.Json;
@@ -19,6 +20,7 @@ public class Configuration : IPluginConfiguration, ISavable
 
     public int Version { get; set; } = Constants.CurrentVersion;
     public string SyncFolder { get; set; } = string.Empty;
+    public List<string> ActiveMods { get; set; } = new();
 
     [JsonIgnore] private readonly SaveService _saveService;
 

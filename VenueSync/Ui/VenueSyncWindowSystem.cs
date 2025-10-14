@@ -19,6 +19,8 @@ public class VenueSyncWindowSystem: IDisposable
         _windowSystem.AddWindow(houseVerifyWindow);
         _windowSystem.AddWindow(mannequinsWindow);
         
+        VenueSync.Log.Debug("Loading Windows");
+        
         _uiBuilder.OpenMainUi += _mainWindow.Toggle;
         _uiBuilder.Draw += _windowSystem.Draw;
         _uiBuilder.OpenConfigUi += _mainWindow.OpenSettings;

@@ -7,11 +7,11 @@ using Microsoft.Extensions.DependencyInjection;
 using OtterGui.Classes;
 using OtterGui.Services;
 using OtterGui.Log;
-using Penumbra.Api.IpcSubscribers;
 using Penumbra.GameData.Actors;
 using Penumbra.GameData.Data;
 using Penumbra.GameData.DataContainers;
 using Penumbra.GameData.Interop;
+using VenueSync.Data;
 using VenueSync.Events;
 using VenueSync.Services.IPC;
 using VenueSync.Ui;
@@ -73,8 +73,8 @@ public static class ServiceProvider
                    .AddSingleton<Configuration>()
                    .AddSingleton<EphemeralConfig>()
                    .AddSingleton<StateService>()
-                   .AddSingleton<FileService>()
                    .AddSingleton<PluginWatcherService>()
+                   .AddSingleton<ManipulationDataManager>()
                    .AddSingleton<CommandService>();
     
     private static ServiceManager AddIPC(this ServiceManager services)
@@ -84,6 +84,8 @@ public static class ServiceProvider
     private static ServiceManager AddEvents(this ServiceManager services)
         => services.AddSingleton<TabSelected>()
                    .AddSingleton<ServiceConnected>()
+                   .AddSingleton<LoggedIn>()
+                   .AddSingleton<LoggedOut>()
                    .AddSingleton<VenueEntered>()
                    .AddSingleton<VenueExited>();
     
@@ -102,12 +104,12 @@ public static class ServiceProvider
 
 
     private static ServiceManager AddApi(this ServiceManager services)
-        => services.AddSingleton<AccountService>()
+        => services.AddSingleton<GameStateService>()
+                   .AddSingleton<AccountService>()
                    .AddSingleton<SocketService>()
                    .AddSingleton<LocationService>()
                    .AddSingleton<MannequinService>()
                    .AddSingleton<TerritoryWatcher>()
-                   .AddSingleton<PlayerWatcher>()
                    .AddSingleton<VenueService>();
 
     private static ServiceManager AddUi(this ServiceManager services)

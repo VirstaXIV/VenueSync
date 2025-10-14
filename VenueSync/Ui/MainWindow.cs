@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using OtterGui.Services;
+using OtterGui.Text;
 using OtterGui.Widgets;
 using VenueSync.Events;
 using VenueSync.Services;
@@ -32,21 +34,25 @@ public class MainWindow : Window, IDisposable
         Characters = 3
     }
 
+    private readonly FileDialogManager _fileDialogManager;
     private readonly Configuration _configuration;
     private readonly SocketService _socketService;
+    private readonly StateService _stateService;
+    private readonly VenueWindow _venueWindow;
     private readonly TabSelected _event;
     private readonly MainWindowPosition _position;
     private ITab[] _tabs;
-    
-    public readonly SettingsTab Settings;
-    public readonly VenuesTab Venues;
-    public readonly HousesTab Houses;
-    public readonly CharactersTab Characters;
 
-    public TabType SelectTab;
+    private readonly SettingsTab _settings;
+    private readonly VenuesTab _venues;
+    private readonly HousesTab _houses;
+    private readonly CharactersTab _characters;
 
-    public MainWindow(IDalamudPluginInterface pluginInterface, Configuration configuration, 
-        SettingsTab settings, VenuesTab venueTab, CharactersTab charactersTab, HousesTab housesTab,
+    private TabType _selectTab;
+
+    public MainWindow(
+        IDalamudPluginInterface pluginInterface, FileDialogManager fileDialogManager, Configuration configuration, StateService stateService,
+        SettingsTab settings, VenueWindow venueWindow, VenuesTab venueTab, CharactersTab charactersTab, HousesTab housesTab,
         TabSelected @event, MainWindowPosition position, SocketService socketService) : base("VenueSyncMainWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
@@ -54,20 +60,22 @@ public class MainWindow : Window, IDisposable
             MinimumSize = new Vector2(600, 400),
             MaximumSize = new Vector2(600, 400),
         };
-        Settings   = settings;
-        Venues = venueTab;
-        Houses = housesTab;
-        Characters = charactersTab;
+        _settings = settings;
+        _venues = venueTab;
+        _houses = housesTab;
+        _characters = charactersTab;
+        _fileDialogManager = fileDialogManager;
         _configuration = configuration;
         _socketService = socketService;
+        _stateService = stateService;
+        _venueWindow = venueWindow;
         _event = @event;
         _position = position;
-        _tabs =
-        [
-            settings
+        _tabs = [
+            _settings
         ];
 
-        SelectTab = _configuration.Ephemeral.SelectedTab;
+        _selectTab = _configuration.Ephemeral.SelectedTab;
         _event.Subscribe(OnTabSelected, TabSelected.Priority.MainWindow);
         IsOpen = _configuration.OpenWindowAtStart;
     }
@@ -75,7 +83,7 @@ public class MainWindow : Window, IDisposable
     public void OpenSettings()
     {
         IsOpen = true;
-        SelectTab = TabType.Settings;
+        _selectTab = TabType.Settings;
     }
 
     public override void PreDraw()
@@ -84,7 +92,11 @@ public class MainWindow : Window, IDisposable
         WindowName = $"VenueSync v{VenueSync.Version}###VenueSyncMainWindow";
     }
 
-    public void Dispose() => _event.Unsubscribe(OnTabSelected);
+    public void Dispose()
+    {
+        _event.Unsubscribe(OnTabSelected);
+        _fileDialogManager.Reset();
+    }
 
     public override void Draw()
     {
@@ -94,21 +106,29 @@ public class MainWindow : Window, IDisposable
         if (!_socketService.Connected)
         {
             _tabs = [
-                Settings
+                _settings
             ];
         }
         else
         {
             _tabs = [
-                Characters,
-                Houses,
-                Venues,
-                Settings
+                _characters,
+                _houses,
+                _venues,
+                _settings
             ];
         }
 
-        if (TabBar.Draw("##tabs", ImGuiTabBarFlags.None, ToLabel(SelectTab), out var currentTab, () => { }, _tabs))
-            SelectTab = TabType.None;
+        if (_stateService.VenueState.id != string.Empty)
+        {
+            if (ImUtf8.Button($"Toggle {_stateService.VenueState.name} Window"))
+            {
+                _venueWindow.Toggle();
+            }
+        }
+
+        if (TabBar.Draw("##tabs", ImGuiTabBarFlags.None, ToLabel(_selectTab), out var currentTab, () => { }, _tabs))
+            _selectTab = TabType.None;
         var tab = FromLabel(currentTab);
 
         if (tab != _configuration.Ephemeral.SelectedTab)
@@ -120,27 +140,27 @@ public class MainWindow : Window, IDisposable
 
     private ReadOnlySpan<byte> ToLabel(TabType type)
         => type switch {
-            TabType.Settings => Settings.Label,
-            TabType.Characters => Characters.Label,
-            TabType.Houses => Houses.Label,
-            TabType.Venues => Venues.Label,
+            TabType.Settings => _settings.Label,
+            TabType.Characters => _characters.Label,
+            TabType.Houses => _houses.Label,
+            TabType.Venues => _venues.Label,
             _ => ReadOnlySpan<byte>.Empty,
         };
 
     private TabType FromLabel(ReadOnlySpan<byte> label)
     {
         // @formatter:off
-        if (label == Settings.Label)   return TabType.Settings;
-        if (label == Characters.Label)   return TabType.Characters;
-        if (label == Houses.Label)   return TabType.Houses;
-        if (label == Venues.Label)   return TabType.Venues;
+        if (label == _settings.Label)   return TabType.Settings;
+        if (label == _characters.Label)   return TabType.Characters;
+        if (label == _houses.Label)   return TabType.Houses;
+        if (label == _venues.Label)   return TabType.Venues;
         // @formatter:on
         return TabType.None;
     }
 
     private void OnTabSelected(TabType type)
     {
-        SelectTab = type;
+        _selectTab = type;
         IsOpen = true;
     }
 }

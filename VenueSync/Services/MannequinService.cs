@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Utility;
-using VenueSync.Data.DTO.Locations;
 using VenueSync.Data.DTO.Mannequins;
 using VenueSync.State;
 

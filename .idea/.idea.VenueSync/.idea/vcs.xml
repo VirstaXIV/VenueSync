@@ -4,5 +4,8 @@
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/OtterGui" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/OtterGui/OtterGuiInternal" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Penumbra.Api" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Penumbra.GameData" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Penumbra.String" vcs="Git" />
   </component>
 </project>

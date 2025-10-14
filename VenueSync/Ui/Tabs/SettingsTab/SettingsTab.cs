@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -11,9 +10,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.ImGuiNotification;
-using Dalamud.Interface.Utility;
 using Dalamud.Utility;
-using Dalamud.Utility.Numerics;
 using OtterGui.Classes;
 using OtterGui.Text;
 using OtterGui.Widgets;
@@ -22,7 +19,7 @@ using VenueSync.Services;
 namespace VenueSync.Ui.Tabs.SettingsTab;
 
 public class SettingsTab(Configuration configuration, StateService stateService, 
-    AccountService accountService, SocketService socketService, FileDialogManager fileDialogManager, FileService fileService, IPCManager ipcManager): ITab
+    AccountService accountService, SocketService socketService, FileDialogManager fileDialogManager, IPCManager ipcManager): ITab
 {
     private bool _currentlyRegistering = false;
     private bool _registered = false;
@@ -32,7 +29,8 @@ public class SettingsTab(Configuration configuration, StateService stateService,
     private bool _isConnecting = false;
     private bool _isDisconnecting = false;
     
-    private bool _fileSelectError = false;
+    private string _fileSelectError = string.Empty;
+    private bool _dialogIsOpen = false;
     
     public ReadOnlySpan<byte> Label => "Settings"u8;
 
@@ -178,13 +176,34 @@ public class SettingsTab(Configuration configuration, StateService stateService,
             }
         }
     }
+    
+    private bool IsDirectoryWritable(string dirPath, bool throwIfFails = false)
+    {
+        try
+        {
+            using FileStream fs = File.Create(
+                Path.Combine(
+                    dirPath,
+                    Path.GetRandomFileName()
+                ),
+                1,
+                FileOptions.DeleteOnClose);
+            return true;
+        }
+        catch
+        {
+            if (throwIfFails)
+                throw;
+
+            return false;
+        }
+    }
 
     private void DrawFilesystemSettings()
     {
         if (!ImUtf8.CollapsingHeader("Files"u8))
             return;
 
-        ImGui.SetNextItemWidth(150 * ImGuiHelpers.GlobalScale);
         var defaultFolderName = @"C:\FFXIVVenueSync";
         var syncFolder = configuration.SyncFolder == string.Empty ? defaultFolderName : configuration.SyncFolder;
         ImGui.InputText("Storage Folder##cache", ref syncFolder, 255, ImGuiInputTextFlags.ReadOnly);
@@ -194,13 +213,26 @@ public class SettingsTab(Configuration configuration, StateService stateService,
         if (ImUtf8.IconButton(FontAwesomeIcon.Folder))
         {
             //TODO: Figure out the issue with opening a dialog
-            fileDialogManager.SaveFolderDialog("Pick VenueSync Storage Folder", defaultFolderName, (success, path) =>
+            _dialogIsOpen = true;
+            fileDialogManager.OpenFolderDialog("Pick VenueSync Storage Folder", (success, path) =>
             {
                 if (!success) return;
 
                 var isOneDrive = path.Contains("onedrive", StringComparison.OrdinalIgnoreCase);
-                var isWritable = fileService.IsDirectoryWritable(path);
+                var isWritable = IsDirectoryWritable(path);
                 var isPenumbraDirectory = string.Equals(path.ToLowerInvariant(), ipcManager.Penumbra.ModDirectory?.ToLowerInvariant(), StringComparison.Ordinal);
+                
+                if (isOneDrive || isPenumbraDirectory)
+                {
+                    _fileSelectError = "Don't use penumbra or onedrive folders.";
+                    return;
+                }
+                
+                if (!isWritable)
+                {
+                    _fileSelectError = "Directory is not writable.";
+                    return;
+                }
                 
                 var cacheDirFiles = Directory.GetFiles(path, "*", SearchOption.AllDirectories);
                 var cacheSubDirs = Directory.GetDirectories(path);
@@ -213,27 +245,36 @@ public class SettingsTab(Configuration configuration, StateService stateService,
 
                 if (!otherFiles && cacheSubDirs.Select(f => Path.GetFileName(Path.TrimEndingDirectorySeparator(f))).Any(f => !f.Equals("subst", StringComparison.OrdinalIgnoreCase)))
                 {
-                    otherFiles = true;
+                    _fileSelectError = "Invalid files found in folder.";
+                    return;
                 }
 
-                var validPath = Regex.IsMatch(path, @"^(?:[a-zA-Z]:\\[\w\s\-\\]+?|\/(?:[\w\s\-\/])+?)$", RegexOptions.ECMAScript);
-
-                if (!string.IsNullOrEmpty(path) && Directory.Exists(path) && isWritable && !isOneDrive && !isPenumbraDirectory && !otherFiles && validPath)
+                if (!Regex.IsMatch(path, @"^(?:[a-zA-Z]:\\[\w\s\-\\]+?|\/(?:[\w\s\-\/])+?)$", RegexOptions.ECMAScript))
                 {
-                    _fileSelectError = false;
+                    _fileSelectError = "Invalid path.";
+                    return;
+                }
+
+                if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+                {
                     configuration.SyncFolder = path;
                     configuration.Save();
                 }
                 else
                 {
-                    _fileSelectError = true;
+                    _fileSelectError = "Invalid path.";
                 }
             }, @"C:\");
         }
-
-        if (_fileSelectError)
+        
+        if (_dialogIsOpen)
         {
-            ImUtf8.Text("Invalid Path"u8, (uint)ImGuiColors.DalamudRed.GetHashCode());
+            fileDialogManager.Draw();
+        }
+
+        if (_fileSelectError != string.Empty)
+        {
+            ImUtf8.Text("Invalid Path"u8);
         }
     }
 
