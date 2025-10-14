@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 using OtterGui;
 using OtterGui.Services;
 using Penumbra.GameData.Actors;
@@ -17,7 +18,7 @@ public record ManipulationImcRecord
     public PrimaryId PrimaryId { get; set; } = 0;
     public SecondaryId SecondaryId { get; set; } = 0;
     public Variant Variant { get; set; } = 1;
-    public EquipSlot EquipSlot { get; set; } = EquipSlot.Body;
+    public string EquipSlot { get; set; } = Penumbra.GameData.Enums.EquipSlot.Body.ToName();
     public string BodySlot { get; set; } = "Unknown";
 }
 
@@ -44,7 +45,10 @@ public class ManipulationDataManager: IService
         return new ManipulationImcRecord() {
             PrimaryId = armor.Set,
             Variant = armor.Variant,
-            EquipSlot = slot
+            EquipSlot = slot.ToName(),
+            Entry = new ImcEntry() {
+                VfxId = 1
+            }
         };
     }
 
@@ -73,6 +77,8 @@ public class ManipulationDataManager: IService
                 availableSlots.Remove(activeSlot);
             }
         }
+        
+        VenueSync.Log.Debug($"Setting IMC: {JsonConvert.SerializeObject(imcs)}");
 
         return new ManipulationDataRecord() {
             Paths = paths,

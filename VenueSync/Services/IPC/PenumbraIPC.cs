@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Dalamud.Plugin;
 using Penumbra.Api.Helpers;
 using Penumbra.Api.IpcSubscribers;
@@ -19,6 +20,9 @@ public class PenumbraIPC: IDisposable
     private readonly EventSubscriber _penumbraInit;
     private readonly GetModDirectory _penumbraResolveModDir;
     private readonly GetEnabledState _penumbraEnabled;
+    
+    private CancellationTokenSource _disposalRedrawCts = new();
+    
     public string? ModDirectory
     {
         get => _penumbraModDirectory;

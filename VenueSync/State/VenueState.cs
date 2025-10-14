@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Dalamud.Interface.Textures.TextureWraps;
 
 namespace VenueSync.State;
 
@@ -6,6 +7,8 @@ public record VenueData
 {
     public string id { get; set; } = "";
     public string name { get; set; } = "";
+    public string logo { get; set; } = "";
+    public string hash { get; set; } = "";
 }
 
 public record MannequinItem
@@ -20,6 +23,7 @@ public record MannequinModFileItem
     public string path { get; set; } = "";
     public string file { get; init; } = "";
     public string hash { get; init; } = "";
+    public string extension { get; init; } = "";
 }
 
 public record MannequinModItem
@@ -30,6 +34,7 @@ public record MannequinModItem
     public string file { get; init; } = "";
     public string hash { get; init; } = "";
     public string mannequin_id { get; init; } = "";
+    public string extension { get; init; } = "";
     public List<MannequinModFileItem> files { get; init; } = [];
 }
 
@@ -52,5 +57,8 @@ public record VenueState
 {
     public string id { get; set; } = "";
     public string name { get; set; } = "";
+    public string logo { get; set; } = "";
+    public string hash { get; set; } = "";
+    public IDalamudTextureWrap? logoTexture;
     public required VenueLocation location { get; set; }
 }

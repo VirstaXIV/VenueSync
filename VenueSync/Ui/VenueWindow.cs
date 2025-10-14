@@ -6,6 +6,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using OtterGui.Services;
 using OtterGui.Text;
+using VenueSync.Events;
 using VenueSync.Services;
 
 namespace VenueSync.Ui;
@@ -21,10 +22,14 @@ public class VenueWindow : Window, IDisposable
 {
     private readonly Configuration _configuration;
     private readonly StateService _stateService;
+    private readonly SyncFileService _syncFileService;
     private readonly VenueWindowPosition _position;
     
-    public VenueWindow(IDalamudPluginInterface pluginInterface, Configuration configuration,
-        StateService stateService, VenueWindowPosition position) : base("VenueSyncVenueWindow")
+    private readonly ReloadMods _reloadMods;
+    private readonly DisableMods _disableMods;
+    
+    public VenueWindow(IDalamudPluginInterface pluginInterface, Configuration configuration, SyncFileService syncFileService,
+        StateService stateService, VenueWindowPosition position, ReloadMods @reloadMods, DisableMods @disableMods) : base("VenueSyncVenueWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
         SizeConstraints = new WindowSizeConstraints() {
@@ -33,7 +38,11 @@ public class VenueWindow : Window, IDisposable
         };
         _configuration = configuration;
         _stateService = stateService;
+        _syncFileService = syncFileService;
         _position = position;
+        
+        _reloadMods = @reloadMods;
+        _disableMods = @disableMods;
     }
     
     public override void PreDraw()
@@ -73,27 +82,33 @@ public class VenueWindow : Window, IDisposable
                          {
                              _configuration.ActiveMods.Add(mod.mannequin_id);
                          }
+                         _reloadMods.Invoke();
                      });
         }
 
-        /*ImGui.BeginDisabled(_fileService.IsDownloading);
+        if (_stateService.VenueState.logoTexture != null)
+        {
+            ImGui.Image(_stateService.VenueState.logoTexture.Handle, new Vector2(250, 250));
+        }
+
+        ImGui.BeginDisabled(_syncFileService.IsDownloading);
         if (ImGui.Button("Reload Mods"))
         {
-            _venueService.ReloadMods();
+            _reloadMods.Invoke();
         }
         ImGui.SameLine();
         if (ImGui.Button("Disable Mods"))
         {
-            _venueService.DisposeMods();
+            _disableMods.Invoke();
         }
-        ImGui.EndDisabled();*/
+        ImGui.EndDisabled();
 
-        // DrawDownloadProgress();
+        DrawDownloadProgress();
     }
     
-    /*public void DrawDownloadProgress()
+    public void DrawDownloadProgress()
     {
-        if (!_fileService.IsDownloading)
+        if (!_syncFileService.IsDownloading)
         {
             return;
         }
@@ -101,7 +116,7 @@ public class VenueWindow : Window, IDisposable
         ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(0.2f, 0.2f, 0.25f, 1.0f));
         ImGui.PushStyleColor(ImGuiCol.PlotHistogram, new Vector4(0.3f, 0.7f, 0.3f, 1.0f));
     
-        float progress = (float)(_fileService.OverallDownloadProgress / 100.0);
+        float progress = (float)(_syncFileService.OverallDownloadProgress / 100.0);
     
         // Animated loading text
         string[] spinner = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" };
@@ -112,19 +127,19 @@ public class VenueWindow : Window, IDisposable
     
         // Overlay text on progress bar
         ImGui.SameLine();
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(_fileService.OverallDownloadProgressString).X / 2 - ImGui.GetContentRegionAvail().X / 2);
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(_syncFileService.OverallDownloadProgressString).X / 2 - ImGui.GetContentRegionAvail().X / 2);
         ImGui.SetCursorPosY(ImGui.GetCursorPosY() - 21);
-        ImGui.TextColored(new Vector4(1.0f, 1.0f, 1.0f, 1.0f), _fileService.OverallDownloadProgressString);
+        ImGui.TextColored(new Vector4(1.0f, 1.0f, 1.0f, 1.0f), _syncFileService.OverallDownloadProgressString);
     
-        ImGui.Text($"Files: {_fileService.ActiveDownloadCount} active");
+        ImGui.Text($"Files: {_syncFileService.ActiveDownloadCount} active");
     
         ImGui.PopStyleColor(2);
     
         if (ImGui.Button("Cancel All##downloads", new Vector2(-1, 0)))
         {
-            _fileService.CancelAllDownloads();
+            _syncFileService.CancelAllDownloads();
         }
-    }*/
+    }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private void Checkbox(string label, string tooltip, bool current, Action<bool> setter)

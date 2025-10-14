@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using VenueSync.Events;
 
 namespace VenueSync.Services;
@@ -35,12 +36,31 @@ public class GameStateService: IDisposable
         _loggedOutEvent = @loggedOut;
         
         VenueSync.Log.Debug($"Starting Client State Service.");
-        Start();
+        StartFramework();
+        StartLoginState();
     }
 
-    private void Start()
+    private void StartFramework()
     {
         _framework.Update += OnFrameworkUpdate;
+    }
+
+    private void StartLoginState()
+    {
+        _clientState.Login += OnLogin;
+        _clientState.Logout += OnLogout;
+    }
+
+    private void OnLogin()
+    {
+        VenueSync.Log.Debug("Client Login.");
+        _loggedInEvent.Invoke();
+    }
+
+    private void OnLogout(int type, int code)
+    {
+        VenueSync.Log.Debug("Client Logout.");
+        _loggedOutEvent.Invoke();
     }
 
     private void SetCurrentPlayer()
@@ -155,16 +175,16 @@ public class GameStateService: IDisposable
             var localPlayer = _clientState.LocalPlayer;
             if (localPlayer != null && !IsLoggedIn)
             {
+                // This will trigger on changing zones too.
                 VenueSync.Log.Debug("Logged in");
                 IsLoggedIn = true;
                 SetCurrentPlayer();
-                _loggedInEvent.Invoke();
             }
             else if (localPlayer == null && IsLoggedIn)
             {
+                // This will trigger on changing zones too.
                 VenueSync.Log.Debug("Logged out");
                 IsLoggedIn = false;
-                _loggedOutEvent.Invoke();
             }
         }
         catch (Exception exception)
@@ -176,5 +196,7 @@ public class GameStateService: IDisposable
     public void Dispose()
     {
         _framework.Update -= OnFrameworkUpdate;
+        _clientState.Login -= OnLogin;
+        _clientState.Logout -= OnLogout;
     }
 }

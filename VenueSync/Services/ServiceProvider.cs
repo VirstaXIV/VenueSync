@@ -73,6 +73,7 @@ public static class ServiceProvider
                    .AddSingleton<Configuration>()
                    .AddSingleton<EphemeralConfig>()
                    .AddSingleton<StateService>()
+                   .AddSingleton<SyncFileService>()
                    .AddSingleton<PluginWatcherService>()
                    .AddSingleton<ManipulationDataManager>()
                    .AddSingleton<CommandService>();
@@ -86,6 +87,8 @@ public static class ServiceProvider
                    .AddSingleton<ServiceConnected>()
                    .AddSingleton<LoggedIn>()
                    .AddSingleton<LoggedOut>()
+                   .AddSingleton<ReloadMods>()
+                   .AddSingleton<DisableMods>()
                    .AddSingleton<VenueEntered>()
                    .AddSingleton<VenueExited>();
     

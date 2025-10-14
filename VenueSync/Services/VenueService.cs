@@ -1,8 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 using Dalamud.Interface.ImGuiNotification;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
 using OtterGui.Classes;
 using Penumbra.Api.Enums;
 using Penumbra.Api.IpcSubscribers;
@@ -21,40 +27,49 @@ public class VenueService: IDisposable
 {
     private readonly Configuration _configuration;
     private readonly ActorObjectManager _objects;
+    private readonly ITextureProvider _textureProvider;
     private readonly GameStateService _gameStateService;
     private readonly StateService _stateService;
-    private readonly VenueWindow _venueWindow;
+    private readonly SyncFileService _syncFileService;
+    private readonly VenueSyncWindowSystem _windowSystem;
     private readonly PenumbraIPC _penumbraIPC;
     private readonly ManipulationDataManager _manipulationDataManager;
     private readonly VenueEntered _venueEntered;
     private readonly VenueExited _venueExited;
     private readonly LoggedIn _loggedIn;
     private readonly LoggedOut _loggedOut;
+    private readonly ReloadMods _reloadMods;
+    private readonly DisableMods _disableMods;
     
     private readonly AddTemporaryMod _penumbraAddTemporaryMod;
     private readonly RemoveTemporaryMod _penumbraRemoveTemporaryMod;
     private readonly CreateTemporaryCollection _penumbraCreateNamedTemporaryCollection;
     private readonly AssignTemporaryCollection _penumbraAssignTemporaryCollection;
     private readonly DeleteTemporaryCollection _penumbraRemoveTemporaryCollection;
+    private readonly RedrawObject _penumbraRedrawObject;
     
     private Dictionary<string, Guid> _collectionIds;
     
-    public VenueService(IDalamudPluginInterface pluginInterface, ActorObjectManager objects, 
-        Configuration configuration, GameStateService gameStateService,
-        StateService stateService, VenueWindow venueWindow, PenumbraIPC penumbraIPC, ManipulationDataManager manipulationDataManager,
-        VenueEntered @venueEntered, VenueExited @venueExited, LoggedIn @loggedIn, LoggedOut @loggedOut)
+    public VenueService(IDalamudPluginInterface pluginInterface, ActorObjectManager objects, ITextureProvider textureProvider,
+        Configuration configuration, GameStateService gameStateService, SyncFileService syncFileService,
+        StateService stateService, VenueSyncWindowSystem windowSystem, PenumbraIPC penumbraIPC, ManipulationDataManager manipulationDataManager,
+        VenueEntered @venueEntered, VenueExited @venueExited, LoggedIn @loggedIn, LoggedOut @loggedOut, ReloadMods @reloadMods, DisableMods @disableMods)
     {
         _configuration = configuration;
         _gameStateService = gameStateService;
         _objects = objects;
+        _textureProvider = textureProvider;
         _stateService = stateService;
-        _venueWindow = venueWindow;
+        _syncFileService = syncFileService;
+        _windowSystem = windowSystem;
         _penumbraIPC = penumbraIPC;
         _manipulationDataManager = manipulationDataManager;
         _venueEntered = @venueEntered;
         _venueExited = @venueExited;
         _loggedIn = @loggedIn;
         _loggedOut = @loggedOut;
+        _reloadMods = @reloadMods;
+        _disableMods = @disableMods;
 
         _collectionIds = [];
         
@@ -65,18 +80,22 @@ public class VenueService: IDisposable
         _penumbraCreateNamedTemporaryCollection = new CreateTemporaryCollection(pluginInterface);
         _penumbraAssignTemporaryCollection = new AssignTemporaryCollection(pluginInterface);
         _penumbraRemoveTemporaryCollection = new DeleteTemporaryCollection(pluginInterface);
+        _penumbraRedrawObject = new RedrawObject(pluginInterface);
         
         _venueEntered.Subscribe(OnVenueEntered, VenueEntered.Priority.High);
         _venueExited.Subscribe(OnVenueExited, VenueExited.Priority.High);
         _loggedOut.Subscribe(DisposeMods, LoggedOut.Priority.High);
+        _reloadMods.Subscribe(ReloadAllMods, ReloadMods.Priority.High);
+        _disableMods.Subscribe(DisposeMods, DisableMods.Priority.High);
     }
 
-    public void ReloadMods()
+    public void ReloadAllMods()
     {
         _gameStateService.RunOnFrameworkThread(() =>
         {
             if (_penumbraIPC.IsAvailable && _gameStateService.IsLoggedIn)
             {
+                DisposeMannequins();
                 HandleMannequins();
             }
         }).ConfigureAwait(false);
@@ -95,9 +114,21 @@ public class VenueService: IDisposable
 
     public void Dispose()
     {
+        _stateService.VenueState.logoTexture?.Dispose();
         DisposeMannequins();
         _venueEntered.Unsubscribe(OnVenueEntered);
         _venueExited.Unsubscribe(OnVenueExited);
+    }
+
+    private void Redraw()
+    {
+        var mannequinList = _objects
+                            .Where(p => p.Value.Objects.Any(a => a.Model))
+                            .Where(p => p.Key.Type is IdentifierType.Retainer);
+        foreach (var mannequin in mannequinList)
+        {
+            _penumbraRedrawObject.Invoke(mannequin.Key.Index.Index, RedrawType.Redraw);
+        }
     }
 
     private void HandleMannequins()
@@ -116,8 +147,10 @@ public class VenueService: IDisposable
                 continue;
             }
             List<MannequinModItem> mods = _stateService.VenueState.location.mods.Where(m => m.mannequin_id.Equals(loadedMannequin.id)).ToList();
-            //SetupMod(loadedMannequin, mannequin, mods);
+            SetupMod(loadedMannequin, mannequin, mods);
         }
+
+        Redraw();
     }
     
     private void DisposeMannequins()
@@ -128,6 +161,8 @@ public class VenueService: IDisposable
         }
         
         _collectionIds = [];
+        
+        Redraw();
     }
 
     private void LoadMod(string uid, ushort idx, Dictionary<string, string> fileList, string manipulationData)
@@ -196,17 +231,19 @@ public class VenueService: IDisposable
             ManipulationDataRecord manipulationData = _manipulationDataManager.BuildManipulationData(mannequinActor, mods);
 
             // Check files are downloaded and ready, or ensure download is running
-            /*if (!_fileService.VerifyModFiles(mods))
+            if (!_syncFileService.VerifyModFiles(mods))
             {
-                _fileService.DownloadModFiles(mods);
+                _syncFileService.DownloadModFiles(mods);
                 return;
-            }*/
+            }
             
-            /*LoadMod(uid, idx, _fileService.BuildModFileList(manipulationData.Paths, mods), manipulationData.ManipulationString);*/
+            VenueSync.Log.Debug($"Setting Meta for Mod: {manipulationData.ManipulationString}");
+            
+            LoadMod(uid, idx, _syncFileService.BuildModFileList(manipulationData.Paths, mods), manipulationData.ManipulationString);
         }
         catch (Exception exception)
         {
-            VenueSync.Log.Error($"Failed to setup mod: {exception.Message}");
+            VenueSync.Log.Error($"Failed to setup mod: {exception.ToString()}");
         }
     }
 
@@ -218,27 +255,56 @@ public class VenueService: IDisposable
             _penumbraRemoveTemporaryCollection.Invoke(guid);
         }
     }
+    
+    async private Task LoadLogoTexture(string imagePath)
+    {
+        try
+        {
+            _stateService.VenueState.logoTexture?.Dispose();
+
+            await using var fileStream = File.OpenRead(imagePath);
+            _stateService.VenueState.logoTexture = await _textureProvider.CreateFromImageAsync(
+                                                       fileStream,
+                                                       leaveOpen: false,
+                                                       cancellationToken: CancellationToken.None
+                                                   );
+            VenueSync.Log.Debug("Logo texture loaded successfully");
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Error($"Failed to load logo texture: {ex.Message}");
+        }
+    }
 
     private void OnVenueEntered(VenueEnteredData data)
     {
         _stateService.VenueState.id = data.venue.id;
         _stateService.VenueState.name = data.venue.name;
         _stateService.VenueState.location = data.location;
+        _stateService.VenueState.logo = data.venue.logo;
+        _stateService.VenueState.hash = data.venue.hash;
+
+        _syncFileService.MaybeDownloadFile(data.venue.id, data.venue.logo, "png", data.venue.hash, path =>
+        {
+            _ = Task.Run(async () => await LoadLogoTexture(path));
+        });
         
         VenueSync.Messager.NotificationMessage($"Welcome to [{data.venue.name}]", NotificationType.Success);
 
-        if (!_venueWindow.IsOpen)
+        if (!_windowSystem.VenueWindowOpened())
         {
-            _venueWindow.Toggle();
+            _windowSystem.ToggleVenueWindow();
         }
+
+        ReloadAllMods();
     }
 
     private void OnVenueExited()
     {
         DisposeMods();
-        if (_venueWindow.IsOpen)
+        if (_windowSystem.VenueWindowOpened())
         {
-            _venueWindow.Toggle();
+            _windowSystem.ToggleVenueWindow();
         }
     }
 }
