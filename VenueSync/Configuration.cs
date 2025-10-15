@@ -74,18 +74,22 @@ public class Configuration : IPluginConfiguration, ISavable
     public static class Constants
     {
         public const int CurrentVersion = 1;
-        //public const string API_ENDPOINT = "https://venuesync.test/api";
+        
+        public const string VenueSyncDashboard = "https://venuesync.test";
+        
+#if DEBUG
+        public const string API_ENDPOINT = "https://venuesync.test/api";
+        public const string SOCKET_APP_KEY = "laravel-herd";
+        public const string SOCKET_HOST = "localhost";
+        public const int SOCKET_PORT = 8080;
+        public const string SOCKET_SCHEME = "http";
+#else
         public const string API_ENDPOINT = "https://dev.xivvenuesync.com/api";
-        
-        //public const string SOCKET_APP_KEY = "laravel-herd";
-        //public const string SOCKET_HOST = "localhost";
-        //public const int SOCKET_PORT = 8080;
-        //public const string SOCKET_SCHEME = "http";
-        
         public const string SOCKET_APP_KEY = "omgsf8gip6kbwtb0oqju";
         public const string SOCKET_HOST = "ws.dev.xivvenuesync.com";
         public const int SOCKET_PORT = 443;
         public const string SOCKET_SCHEME = "https";
+#endif
         
         public const string SOCKET_CHANNEL_AUTH = $"{API_ENDPOINT}/broadcasting/auth";
         public const string SOCKET_USER_AUTH = $"{API_ENDPOINT}/broadcasting/user-auth";

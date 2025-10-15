@@ -51,14 +51,14 @@ public sealed class VenueSync : IDalamudPlugin
                 Log.Debug("Loading Venue Service");
                 _services.GetService<VenueService>();
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Log.Error($"Failed to load Venue Sync: {e.Message}");
+                Log.Error($"Failed to load Venue Sync: {exception.Message}");
             }
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            Log.Fatal($"VenueSync v{Version} failed to load.");
+            Log.Fatal($"VenueSync v{Version} failed to load: {exception.Message}");
             Dispose();
             throw;
         }

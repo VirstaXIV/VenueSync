@@ -35,6 +35,7 @@ public class VenueService: IDisposable
     private readonly PenumbraIPC _penumbraIPC;
     private readonly ManipulationDataManager _manipulationDataManager;
     private readonly VenueEntered _venueEntered;
+    private readonly VenueUpdated _venueUpdated;
     private readonly VenueExited _venueExited;
     private readonly LoggedIn _loggedIn;
     private readonly LoggedOut _loggedOut;
@@ -53,7 +54,7 @@ public class VenueService: IDisposable
     public VenueService(IDalamudPluginInterface pluginInterface, ActorObjectManager objects, ITextureProvider textureProvider,
         Configuration configuration, GameStateService gameStateService, SyncFileService syncFileService,
         StateService stateService, VenueSyncWindowSystem windowSystem, PenumbraIPC penumbraIPC, ManipulationDataManager manipulationDataManager,
-        VenueEntered @venueEntered, VenueExited @venueExited, LoggedIn @loggedIn, LoggedOut @loggedOut, ReloadMods @reloadMods, DisableMods @disableMods)
+        VenueEntered @venueEntered, VenueUpdated @venueUpdated, VenueExited @venueExited, LoggedIn @loggedIn, LoggedOut @loggedOut, ReloadMods @reloadMods, DisableMods @disableMods)
     {
         _configuration = configuration;
         _gameStateService = gameStateService;
@@ -65,6 +66,7 @@ public class VenueService: IDisposable
         _penumbraIPC = penumbraIPC;
         _manipulationDataManager = manipulationDataManager;
         _venueEntered = @venueEntered;
+        _venueUpdated = @venueUpdated;
         _venueExited = @venueExited;
         _loggedIn = @loggedIn;
         _loggedOut = @loggedOut;
@@ -83,6 +85,7 @@ public class VenueService: IDisposable
         _penumbraRedrawObject = new RedrawObject(pluginInterface);
         
         _venueEntered.Subscribe(OnVenueEntered, VenueEntered.Priority.High);
+        _venueUpdated.Subscribe(OnVenueUpdated, VenueUpdated.Priority.High);
         _venueExited.Subscribe(OnVenueExited, VenueExited.Priority.High);
         _loggedOut.Subscribe(DisposeMods, LoggedOut.Priority.High);
         _reloadMods.Subscribe(ReloadAllMods, ReloadMods.Priority.High);
@@ -127,7 +130,10 @@ public class VenueService: IDisposable
                             .Where(p => p.Key.Type is IdentifierType.Retainer);
         foreach (var mannequin in mannequinList)
         {
-            _penumbraRedrawObject.Invoke(mannequin.Key.Index.Index, RedrawType.Redraw);
+            if (mannequin.Value.Objects.Count > 0)
+            {
+                _penumbraRedrawObject.Invoke(mannequin.Value.Objects[0].Index.Index, RedrawType.Redraw);
+            }
         }
     }
 
@@ -283,6 +289,12 @@ public class VenueService: IDisposable
         _stateService.VenueState.location = data.location;
         _stateService.VenueState.logo = data.venue.logo;
         _stateService.VenueState.hash = data.venue.hash;
+        _stateService.VenueState.description = data.venue.description;
+        _stateService.VenueState.open_hours = data.venue.open_hours;
+        _stateService.VenueState.discord_invite = data.venue.discord_invite;
+        _stateService.VenueState.staff = data.staff;
+        _stateService.VenueState.tags = data.tags;
+        _stateService.VenueState.streams = data.streams;
 
         _syncFileService.MaybeDownloadFile(data.venue.id, data.venue.logo, "png", data.venue.hash, path =>
         {
@@ -299,7 +311,29 @@ public class VenueService: IDisposable
         ReloadAllMods();
     }
 
-    private void OnVenueExited()
+    private void OnVenueUpdated(VenueUpdatedData data)
+    {
+        _stateService.VenueState.id = data.venue.id;
+        _stateService.VenueState.name = data.venue.name;
+        _stateService.VenueState.location = data.location;
+        _stateService.VenueState.logo = data.venue.logo;
+        _stateService.VenueState.hash = data.venue.hash;
+        _stateService.VenueState.description = data.venue.description;
+        _stateService.VenueState.open_hours = data.venue.open_hours;
+        _stateService.VenueState.discord_invite = data.venue.discord_invite;
+        _stateService.VenueState.staff = data.staff;
+        _stateService.VenueState.tags = data.tags;
+        _stateService.VenueState.streams = data.streams;
+        
+        _syncFileService.MaybeDownloadFile(data.venue.id, data.venue.logo, "png", data.venue.hash, path =>
+        {
+            _ = Task.Run(async () => await LoadLogoTexture(path));
+        });
+        
+        ReloadAllMods();
+    }
+
+    private void OnVenueExited(string id)
     {
         DisposeMods();
         if (_windowSystem.VenueWindowOpened())

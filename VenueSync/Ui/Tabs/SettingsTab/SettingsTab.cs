@@ -108,6 +108,7 @@ public class SettingsTab(Configuration configuration, StateService stateService,
         }
         else
         {
+            ImGui.TextWrapped($"Removing your token will require re-authenticating. This can help if your having connection troubles.");
             if (ImUtf8.Button("Remove Token"u8))
             {
                 _registerMessage = string.Empty;
@@ -122,6 +123,16 @@ public class SettingsTab(Configuration configuration, StateService stateService,
             ImGui.Spacing();
             ImGui.Spacing();
             
+            ImGui.TextWrapped($"The VenueSync Dashboard lets you add / manage venues. It is unnecessary to do anything there or validate characters if you are just interested in visiting venues.");
+            if (ImUtf8.Button("Open VenueSync Dashboard"u8))
+            {
+                Util.OpenLink(Configuration.Constants.VenueSyncDashboard);
+            }
+            
+            ImGui.Spacing();
+            ImGui.Spacing();
+            ImGui.Spacing();
+            
             Checkbox("Auto Connect"u8, "Should a connection be attempted when possible?"u8, configuration.AutoConnect, v => configuration.AutoConnect = v);
             
             ImGui.Spacing();
@@ -129,7 +140,6 @@ public class SettingsTab(Configuration configuration, StateService stateService,
             ImGui.Spacing();
             
             ImUtf8.Text("Connect to the VenueSync Service"u8);
-
             if (stateService.Connection.Connected)
             {
                 ImGui.BeginDisabled(_isDisconnecting);

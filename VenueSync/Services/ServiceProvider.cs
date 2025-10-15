@@ -90,6 +90,7 @@ public static class ServiceProvider
                    .AddSingleton<ReloadMods>()
                    .AddSingleton<DisableMods>()
                    .AddSingleton<VenueEntered>()
+                   .AddSingleton<VenueUpdated>()
                    .AddSingleton<VenueExited>();
     
     private static ServiceManager AddInterop(this ServiceManager services)

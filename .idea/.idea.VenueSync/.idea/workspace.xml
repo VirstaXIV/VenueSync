@@ -5,17 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="04e0d1f6-b001-4129-81da-8df351bd6ae4" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/VenueSync/Data/ManipulationDataManager.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/dictionaries/project.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/dictionaries/project.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VenueSync/Events/VenueUpdated.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.VenueSync/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Configuration.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Configuration.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Services/FileService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/FileService.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Events/VenueEntered.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Events/VenueEntered.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Events/VenueExited.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Events/VenueExited.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Services/ServiceProvider.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/ServiceProvider.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Services/SocketService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/SocketService.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VenueSync/Services/TerritoryWatcher.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/TerritoryWatcher.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Services/VenueService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Services/VenueService.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/State/VenueState.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/State/VenueState.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VenueSync/Ui/MainWindow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/MainWindow.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Ui/Tabs/SettingsTab/SettingsTab.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/Tabs/SettingsTab/SettingsTab.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/Ui/VenueWindow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/Ui/VenueWindow.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VenueSync/VenueSync.cs" beforeDir="false" afterPath="$PROJECT_DIR$/VenueSync/VenueSync.cs" afterDir="false" />
@@ -55,6 +55,7 @@
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/40e3ea2d8f6030e41cf0aaf9c9cd52eb7e2b81f68b5ecc9cdcfda29c3bd5e/UIState.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/81f3fd7e2b484961b4153548f07e2749cc67a3daa1b085b5e4fd7181484507a/NotificationType.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/a882d183338544fdbcbdfc7b6d3dcb78916630765551644a221b5be9c45a121b/Int32.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/ab3652e3e0c1780ce9b7fbb6938dbec71c093d375262e61691b468390c520/KeyValuePair.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/bf75becd713b2a9776ec893c58f6b559a6e5f32bd05a13722c770c09c46c75/Util.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Configuration.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Data/DTO/Account/User.cs" root0="FORCE_HIGHLIGHTING" />
@@ -66,13 +67,12 @@
     <setting file="file://$PROJECT_DIR$/VenueSync/Events/ServiceConnected.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Events/TabSelected.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Events/VenueEntered.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/VenueSync/Events/VenueUpdated.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/AccountService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/CommandService.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/VenueSync/Services/FileService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/IPC/PenumbraIPC.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/IPCManager.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/LocationService.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/VenueSync/Services/PlayerWatcher.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/PluginWatcherService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/SaveService.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/VenueSync/Services/SocketService.cs" root0="FORCE_HIGHLIGHTING" />
@@ -143,6 +143,7 @@
       <workItem from="1759975586246" duration="68950000" />
       <workItem from="1760073011508" duration="80060000" />
       <workItem from="1760317122985" duration="45082000" />
+      <workItem from="1760525723795" duration="20646000" />
     </task>
     <servers />
   </component>

@@ -41,11 +41,13 @@ public class SocketService: IDisposable
     private readonly AccountService _accountService;
     
     private readonly VenueEntered _venueEntered;
+    private readonly VenueExited _venueExited;
+    private readonly VenueUpdated _venueUpdated;
     private readonly ServiceConnected _serviceConnected;
     private readonly LoggedIn _loggedIn;
     private readonly LoggedOut _loggedOut;
     private Pusher? pusher { get; set; } = null;
-    private Dictionary<string, Channel> _channels = new Dictionary<string, Channel>();
+    private readonly Dictionary<string, Channel> _channels = new();
     private bool _shouldConnect = false;
     
     public bool Connected = false;
@@ -57,7 +59,8 @@ public class SocketService: IDisposable
     public SocketService(
         Configuration configuration, GameStateService gameStateService,
         StateService stateService, AccountService accountService,
-        ServiceConnected @serviceConnected, VenueEntered @venueEntered, LoggedIn @loggedIn, LoggedOut @loggedOut)
+        ServiceConnected @serviceConnected, VenueEntered @venueEntered, LoggedIn @loggedIn, LoggedOut @loggedOut,
+        VenueUpdated @venueUpdated, VenueExited @venueExited)
     {
         _gameStateService = gameStateService;
         _configuration = configuration;
@@ -66,6 +69,8 @@ public class SocketService: IDisposable
 
         _serviceConnected = @serviceConnected;
         _venueEntered = @venueEntered;
+        _venueUpdated = @venueUpdated;
+        _venueExited = @venueExited;
         _loggedIn = @loggedIn;
         _loggedOut = @loggedOut;
 
@@ -76,6 +81,7 @@ public class SocketService: IDisposable
 
         _loggedIn.Subscribe(OnLoggedIn, LoggedIn.Priority.High);
         _loggedOut.Subscribe(OnLoggedOut, LoggedOut.Priority.High);
+        _venueExited.Subscribe(OnVenueExited, VenueExited.Priority.High);
     }
 
     private void OnLoggedIn()
@@ -97,6 +103,12 @@ public class SocketService: IDisposable
     {
         VenueSync.Log.Debug($"Logging out, clearing connection.");
         _ = Task.Run(async () => await Disconnect());
+    }
+
+    private void OnVenueExited(string id)
+    {
+        VenueSync.Log.Debug($"Leaving venue channel.");
+        _ = Task.Run(async () => await RemoveChannel($"venue.{id}").ConfigureAwait(false));
     }
 
     private Pusher GetPusher()
@@ -244,6 +256,14 @@ public class SocketService: IDisposable
             if (data != null)
             {
                 _venueEntered.Invoke(data);
+                _ = Task.Run(async () => await AddChannel($"venue.{data.venue.id}").ConfigureAwait(false));
+            }
+        } else if (eventName == "venue.updated")
+        {
+            var data = JsonConvert.DeserializeObject<VenueUpdatedData>(eventData.Data);
+            if (data != null)
+            {
+                _venueUpdated.Invoke(data);
             }
         }
         VenueSync.Log.Debug($"Got event: {eventName}");

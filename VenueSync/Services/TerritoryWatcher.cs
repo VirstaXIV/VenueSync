@@ -258,6 +258,10 @@ public class TerritoryWatcher: IDisposable
     
     private void LeftHouse()
     {
+        if (_stateService.VenueState.id != string.Empty)
+        {
+            _venueExited.Invoke(_stateService.VenueState.id);
+        }
         _wasInHouse = false;
         _stateService.CurrentHouse = new House();
         _stateService.VenueState = new VenueState() {
@@ -265,7 +269,6 @@ public class TerritoryWatcher: IDisposable
                 mannequins = []
             }
         };
-        _venueExited.Invoke();
         VenueSync.Log.Debug("Player Left House");
     }
     
