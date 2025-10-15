@@ -39,7 +39,10 @@ public class MainWindow : Window, IDisposable
     private readonly SocketService _socketService;
     private readonly StateService _stateService;
     private readonly VenueWindow _venueWindow;
+    
     private readonly TabSelected _event;
+    private readonly LocationChanged _locationChanged;
+    
     private readonly MainWindowPosition _position;
     private ITab[] _tabs;
 
@@ -53,7 +56,7 @@ public class MainWindow : Window, IDisposable
     public MainWindow(
         IDalamudPluginInterface pluginInterface, FileDialogManager fileDialogManager, Configuration configuration, StateService stateService,
         SettingsTab settings, VenueWindow venueWindow, VenuesTab venueTab, CharactersTab charactersTab, HousesTab housesTab,
-        TabSelected @event, MainWindowPosition position, SocketService socketService) : base("VenueSyncMainWindow")
+        TabSelected @event, LocationChanged @locationChanged, MainWindowPosition position, SocketService socketService) : base("VenueSyncMainWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
         SizeConstraints = new WindowSizeConstraints() {
@@ -69,7 +72,10 @@ public class MainWindow : Window, IDisposable
         _socketService = socketService;
         _stateService = stateService;
         _venueWindow = venueWindow;
+        
         _event = @event;
+        _locationChanged = @locationChanged;
+        
         _position = position;
         _tabs = [
             _settings
@@ -124,6 +130,11 @@ public class MainWindow : Window, IDisposable
             if (ImUtf8.Button($"Toggle {_stateService.VenueState.name} Window"))
             {
                 _venueWindow.Toggle();
+            }
+            ImGui.SameLine();
+            if (ImUtf8.Button("Check Venue"))
+            {
+                _locationChanged.Invoke();
             }
         }
 

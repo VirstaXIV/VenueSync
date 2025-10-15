@@ -19,6 +19,7 @@ public class TerritoryWatcher: IDisposable
     private readonly HouseVerifyWindow _houseVerifyWindow;
     
     private readonly ServiceConnected _serviceConnected;
+    private readonly LocationChanged _locationChanged;
     private readonly VenueExited _venueExited;
 
     private bool _isInHouse = false;
@@ -27,7 +28,8 @@ public class TerritoryWatcher: IDisposable
     private bool _running = false;
     
     public TerritoryWatcher(IFramework framework, IClientState clientState, SocketService socketService, StateService stateService, 
-        LocationService locationService, ServiceConnected @serviceConnected, VenueExited @venueExited, HouseVerifyWindow houseVerifyWindow)
+        LocationService locationService, HouseVerifyWindow houseVerifyWindow,
+        ServiceConnected @serviceConnected, VenueExited @venueExited, LocationChanged @locationChanged)
     {
         _framework = framework;
         _clientState = clientState;
@@ -36,10 +38,12 @@ public class TerritoryWatcher: IDisposable
         _locationService = locationService;
         _houseVerifyWindow = houseVerifyWindow;
         
+        _locationChanged = locationChanged;
         _serviceConnected = @serviceConnected;
         _venueExited = @venueExited;
         
         _serviceConnected.Subscribe(OnConnection, ServiceConnected.Priority.None);
+        _locationChanged.Subscribe(OnLocationChanged, LocationChanged.Priority.None);
         
         _framework.Update += OnFrameworkUpdate;
         _clientState.TerritoryChanged += OnTerritoryChanged;
@@ -181,6 +185,14 @@ public class TerritoryWatcher: IDisposable
     }
 
     private void OnConnection()
+    {
+        if (_stateService.CurrentHouse.HouseId > 0)
+        {
+            SendLocation();
+        }
+    }
+    
+    private void OnLocationChanged()
     {
         if (_stateService.CurrentHouse.HouseId > 0)
         {
