@@ -74,16 +74,25 @@ public class Configuration : IPluginConfiguration, ISavable
     public static class Constants
     {
         public const int CurrentVersion = 1;
-        public const string XIVAuthEndpoint = "https://venuesync.test/api/auth/xivauth/register";
-        public const string SOCKET_APP_KEY = "laravel-herd";
-        public const string SOCKET_HOST = "localhost";
-        public const string SOCKET_CHANNEL_AUTH = "https://venuesync.test/api/broadcasting/auth";
-        public const string SOCKET_USER_AUTH = "https://venuesync.test/api/broadcasting/user-auth";
-        public const int SOCKET_PORT = 8080;
-        public const string SOCKET_SCHEME = "http";
-        public const string LocationEndpoint = "https://venuesync.test/api/location/send";
-        public const string HouseVerifyEndpoint = "https://venuesync.test/api/location/verify";
-        public const string MeEndpoint = "https://venuesync.test/api/me";
-        public const string MannequinEndpoint = "https://venuesync.test/api/mannequin/update";
+        //public const string API_ENDPOINT = "https://venuesync.test/api";
+        public const string API_ENDPOINT = "https://dev.xivvenuesync.com/api";
+        
+        //public const string SOCKET_APP_KEY = "laravel-herd";
+        //public const string SOCKET_HOST = "localhost";
+        //public const int SOCKET_PORT = 8080;
+        //public const string SOCKET_SCHEME = "http";
+        
+        public const string SOCKET_APP_KEY = "omgsf8gip6kbwtb0oqju";
+        public const string SOCKET_HOST = "ws.dev.xivvenuesync.com";
+        public const int SOCKET_PORT = 443;
+        public const string SOCKET_SCHEME = "https";
+        
+        public const string SOCKET_CHANNEL_AUTH = $"{API_ENDPOINT}/broadcasting/auth";
+        public const string SOCKET_USER_AUTH = $"{API_ENDPOINT}/broadcasting/user-auth";
+        public const string XIVAuthEndpoint = $"{API_ENDPOINT}/auth/xivauth/register";
+        public const string LocationEndpoint = $"{API_ENDPOINT}/location/send";
+        public const string HouseVerifyEndpoint = $"{API_ENDPOINT}/location/verify";
+        public const string MeEndpoint = $"{API_ENDPOINT}/me";
+        public const string MannequinEndpoint = $"{API_ENDPOINT}/mannequin/update";
     }
 }
