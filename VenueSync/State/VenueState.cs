@@ -12,6 +12,7 @@ public record VenueData
     public string description { get; set; } = "";
     public string open_hours { get; set; } = "";
     public string discord_invite { get; set; } = "";
+    public string carrd_url { get; set; } = "";
 }
 
 public record MannequinItem
@@ -80,6 +81,7 @@ public record VenueState
     public string description { get; set; } = "";
     public string logo { get; set; } = "";
     public string discord_invite { get; set; } = "";
+    public string carrd_url { get; set; } = "";
     public string hash { get; set; } = "";
     public string open_hours { get; set; } = "";
     public List<string> tags { get; set; } = new();

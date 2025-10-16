@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
@@ -6,6 +7,7 @@ using Dalamud.Plugin;
 using OtterGui.Services;
 using VenueSync.Events;
 using VenueSync.Services;
+using VenueSync.Ui.Widgets;
 
 namespace VenueSync.Ui;
 
@@ -21,12 +23,13 @@ public class VenueWindow : Window, IDisposable
     private readonly Configuration _configuration;
     private readonly StateService _stateService;
     private readonly SyncFileService _syncFileService;
+    private readonly GuestListWidget _guestListWidget;
     private readonly VenueWindowPosition _position;
     
     private readonly ReloadMods _reloadMods;
     private readonly DisableMods _disableMods;
     
-    public VenueWindow(IDalamudPluginInterface pluginInterface, Configuration configuration, SyncFileService syncFileService,
+    public VenueWindow(IDalamudPluginInterface pluginInterface, Configuration configuration, SyncFileService syncFileService, GuestListWidget guestListWidget,
         StateService stateService, VenueWindowPosition position, ReloadMods @reloadMods, DisableMods @disableMods) : base("VenueSyncVenueWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
@@ -37,6 +40,7 @@ public class VenueWindow : Window, IDisposable
         _configuration = configuration;
         _stateService = stateService;
         _syncFileService = syncFileService;
+        _guestListWidget = guestListWidget;
         _position = position;
         
         _reloadMods = @reloadMods;
@@ -69,16 +73,119 @@ public class VenueWindow : Window, IDisposable
                 ImGui.Spacing();
             }
             
+            // Discord and Carrd Links (centered under logo)
+            bool hasDiscord = !string.IsNullOrEmpty(venue.discord_invite);
+            bool hasCarrd = !string.IsNullOrEmpty(venue.carrd_url);
+            
+            if (hasDiscord || hasCarrd)
+            {
+                var buttonWidth = 105f;
+                var spacing = 5f;
+                var totalWidth = hasDiscord && hasCarrd ? (buttonWidth * 2 + spacing) : buttonWidth;
+                var startX = (sidebarWidth - totalWidth) / 2;
+                
+                ImGui.SetCursorPosX(startX);
+                
+                if (hasDiscord)
+                {
+                    ImGui.PushStyleColor(ImGuiCol.Button, VenueColors.DiscordButton);
+                    ImGui.PushStyleColor(ImGuiCol.ButtonHovered, VenueColors.DiscordButtonHover);
+                    if (ImGui.Button("Discord", new Vector2(buttonWidth, 30)))
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = venue.discord_invite,
+                            UseShellExecute = true
+                        });
+                    }
+                    ImGui.PopStyleColor(2);
+            
+                    if (ImGui.IsItemHovered())
+                        ImGui.SetTooltip(venue.discord_invite);
+                }
+        
+                if (hasDiscord && hasCarrd)
+                {
+                    ImGui.SameLine(0, spacing);
+                }
+        
+                if (hasCarrd)
+                {
+                    if (!hasDiscord)
+                    {
+                        ImGui.SetCursorPosX(startX);
+                    }
+            
+                    ImGui.PushStyleColor(ImGuiCol.Button, VenueColors.CarrdButton);
+                    ImGui.PushStyleColor(ImGuiCol.ButtonHovered, VenueColors.CarrdButtonHover);
+                    if (ImGui.Button("Carrd", new Vector2(buttonWidth, 30)))
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = venue.carrd_url,
+                            UseShellExecute = true
+                        });
+                    }
+                    ImGui.PopStyleColor(2);
+            
+                    if (ImGui.IsItemHovered())
+                        ImGui.SetTooltip(venue.carrd_url);
+                }
+            
+                ImGui.Spacing();
+            }
+            
+            var liveStream = venue.streams.FirstOrDefault();
+            if (liveStream != null)
+            {
+                var streamButtonWidth = 220f;
+                ImGui.SetCursorPosX((sidebarWidth - streamButtonWidth) / 2);
+        
+                ImGui.PushStyleColor(ImGuiCol.Button, VenueColors.TwitchButton);
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, VenueColors.TwitchButtonHover);
+        
+                var buttonText = $"{liveStream.name} LIVE";
+                if (ImGui.Button(buttonText, new Vector2(streamButtonWidth, 30)))
+                {
+                    if (liveStream.type == "twitch")
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = $"https://twitch.tv/{liveStream.name}",
+                            UseShellExecute = true
+                        });
+                    }
+                }
+                ImGui.PopStyleColor(2);
+        
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip($"{liveStream.title}\n{liveStream.viewers} viewers");
+            
+                ImGui.Spacing();
+            }
+            
             if (venue.location.mods.Count > 0)
             {
                 ImGui.Spacing();
                 ImGui.Separator();
                 ImGui.Spacing();
                 
-                ImGui.TextColored(new Vector4(1f, 0.7f, 0.4f, 1f), "Venue Mods");
+                ImGui.TextColored(VenueColors.SectionHeader, "Venue Mods");
                 ImGui.Spacing();
                 
-                var modsListHeight = ImGui.GetContentRegionAvail().Y - 75; // Reserve space for buttons
+                const float buttonSpacing = 5f;
+                const float buttonHeight = 30f;
+                const float downloadContainerHeight = 65f;
+                const float downloadButtonHeight = 30f;
+                
+                var reservedHeight = buttonSpacing + (buttonHeight * 2) + buttonSpacing + 3f;
+                
+                if (_syncFileService.IsDownloading)
+                {
+                    reservedHeight += buttonSpacing + downloadContainerHeight + downloadButtonHeight + buttonSpacing + 2f;
+                }
+                
+                var modsListHeight = ImGui.GetContentRegionAvail().Y - reservedHeight;
                 ImGui.BeginChild("ModsList", new Vector2(0, modsListHeight), true);
                 
                 foreach (var mod in venue.location.mods)
@@ -115,7 +222,7 @@ public class VenueWindow : Window, IDisposable
                     if (_configuration.ActiveMods.Contains(mod.mannequin_id))
                     {
                         ImGui.SameLine();
-                        ImGui.TextColored(new Vector4(0.4f, 1f, 0.4f, 1f), "✓");
+                        ImGui.TextColored(VenueColors.ActiveIndicator, "✓");
                     }
                     
                     ImGui.Spacing();
@@ -124,19 +231,28 @@ public class VenueWindow : Window, IDisposable
                 }
                 
                 ImGui.EndChild();
+
+                if (_syncFileService.IsDownloading)
+                {
+                    ImGui.Spacing();
+                    DrawDownloadProgress(
+                        _syncFileService.OverallDownloadProgressString, 
+                        _syncFileService.OverallDownloadProgress, 
+                        _syncFileService.ActiveDownloadCount);
+                }
                 
                 ImGui.Spacing();
                 
-                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.8f, 1f));
-                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.3f, 0.7f, 0.9f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.Button, VenueColors.ReloadButton);
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, VenueColors.ReloadButtonHover);
                 if (ImGui.Button("Reload All Mods", new Vector2(-1, 30)))
                 {
                     _reloadMods.Invoke();
                 }
                 ImGui.PopStyleColor(2);
                 
-                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.3f, 0.3f, 1f));
-                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.9f, 0.4f, 0.4f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.Button, VenueColors.DisableButton);
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, VenueColors.DisableButtonHover);
                 if (ImGui.Button("Disable All Mods", new Vector2(-1, 30)))
                 {
                     _disableMods.Invoke();
@@ -152,6 +268,10 @@ public class VenueWindow : Window, IDisposable
         
         ImGui.BeginChild("RightContent", new Vector2(0, 0), false);
         {
+            ImGui.SetWindowFontScale(1.5f);
+            ImGui.TextColored(VenueColors.VenueName, _stateService.VenueState.name);
+            ImGui.SetWindowFontScale(1.0f);
+            
             if (ImGui.BeginTabBar("VenueTabs"))
             {
                 if (ImGui.BeginTabItem("Overview"))
@@ -166,15 +286,18 @@ public class VenueWindow : Window, IDisposable
                     ImGui.EndTabItem();
                 }
 
+                if (_stateService.VisitorsState.players.ContainsKey(_stateService.PlayerState.name))
+                {
+                    if (ImGui.BeginTabItem("Guests"))
+                    {
+                        DrawGuestsTab();
+                        ImGui.EndTabItem();
+                    }
+                }
+
                 /*if (ImGui.BeginTabItem("Events"))
                 {
                     DrawEventsTab();
-                    ImGui.EndTabItem();
-                }
-
-                if (ImGui.BeginTabItem("Staff"))
-                {
-                    DrawStaffTab();
                     ImGui.EndTabItem();
                 }
 
@@ -189,77 +312,49 @@ public class VenueWindow : Window, IDisposable
             }
         }
         ImGui.EndChild();
-        
-        DrawDownloadProgress();
     }
     
     private void DrawOverviewTab()
     {
         var venue = _stateService.VenueState;
         
-        var contentWidth = ImGui.GetContentRegionAvail().X;
-        var textSize = ImGui.CalcTextSize(_stateService.VenueState.name);
-        ImGui.SetCursorPosX((contentWidth - textSize.X) / 2);
-        ImGui.TextColored(new Vector4(1f, 0.8f, 0.4f, 1f), _stateService.VenueState.name);
-        
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        
-        ImGui.Text("Description:");
-        ImGui.Spacing();
-        
-        ImGui.Indent(10);
-        ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-        ImGui.TextColored(new Vector4(0.9f, 0.9f, 0.9f, 1f), venue.description);
-        ImGui.Unindent(10);
+        var descWidth = ImGui.GetContentRegionAvail().X - 20;
+        var wrappedTextSize = ImGui.CalcTextSize(venue.description, false, descWidth);
+        var descHeight = wrappedTextSize.Y + 20;
+    
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, VenueColors.DescriptionBackground);
+        ImGui.BeginChild("DescriptionBox", new Vector2(0, descHeight), true);
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X);
+        ImGui.TextColored(VenueColors.DescriptionText, venue.description);
+        ImGui.PopTextWrapPos();
+        ImGui.EndChild();
+        ImGui.PopStyleColor();
 
         ImGui.Spacing();
         ImGui.Spacing();
         
         ImGui.Text($"Location: ");
         ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.4f, 0.8f, 1f, 1f), 
-            $"{venue.location.world} - {venue.location.district} - Ward {venue.location.ward}, Plot {venue.location.plot}");
+        ImGui.TextColored(VenueColors.LocationText, 
+                          $"{venue.location.world} - {venue.location.district} - Ward {venue.location.ward}, Plot {venue.location.plot}");
         
         ImGui.Text($"Open Hours: ");
-        ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.6f, 1f, 0.6f, 1f), venue.open_hours);
-        
+        ImGui.Spacing();
+        ImGui.TextColored(VenueColors.OpenHours, venue.open_hours != string.Empty ? venue.open_hours : "N/A");
+
         ImGui.Spacing();
         
         ImGui.Text($"Tags: ");
         foreach (var tag in venue.tags)
         {
             ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.9f, 0.7f, 1f, 1f), $"[{tag}]");
+            ImGui.TextColored(VenueColors.Tag, $"[{tag}]");
         }
         
         ImGui.Spacing();
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
-
-        ImGui.Text("Links");
-        ImGui.Spacing();
-
-        if (!string.IsNullOrEmpty(venue.discord_invite))
-        {
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.35f, 0.4f, 0.9f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.45f, 0.5f, 1f, 1f));
-            if (ImGui.Button($"Join Discord Server", new Vector2(200, 30)))
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = venue.discord_invite,
-                    UseShellExecute = true
-                });
-            }
-            ImGui.PopStyleColor(2);
-            
-            if (ImGui.IsItemHovered())
-                ImGui.SetTooltip(venue.discord_invite);
-        }
 
         if (venue.streams.Count > 0)
         {
@@ -269,8 +364,8 @@ public class VenueWindow : Window, IDisposable
             
             foreach (var stream in venue.streams)
             {
-                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.58f, 0.29f, 0.78f, 1f));
-                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.68f, 0.39f, 0.88f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.Button, VenueColors.TwitchButton);
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, VenueColors.TwitchButtonHover);
                 
                 var buttonText = stream.live 
                     ? $"{stream.name} - LIVE ({stream.viewers} viewers)" 
@@ -314,9 +409,9 @@ public class VenueWindow : Window, IDisposable
         {
             ImGui.PushID(staff.name);
         
-            ImGui.TextColored(new Vector4(1f, 0.8f, 0.4f, 1f), staff.name);
+            ImGui.TextColored(VenueColors.StaffName, staff.name);
             ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), $"- {staff.position}");
+            ImGui.TextColored(VenueColors.StaffPosition, $"- {staff.position}");
         
             ImGui.Spacing();
             ImGui.Separator();
@@ -328,38 +423,58 @@ public class VenueWindow : Window, IDisposable
         ImGui.EndChild();
     }
     
-    public void DrawDownloadProgress()
+    private void DrawGuestsTab()
     {
-        if (!_syncFileService.IsDownloading)
+        var visitors = _stateService.VisitorsState;
+    
+        ImGui.Text("Guests");
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        if (visitors.players.Count == 0)
         {
+            ImGui.TextWrapped("No guest information available.");
             return;
         }
 
-        ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(0.2f, 0.2f, 0.25f, 1.0f));
-        ImGui.PushStyleColor(ImGuiCol.PlotHistogram, new Vector4(0.3f, 0.7f, 0.3f, 1.0f));
+        ImGui.BeginChild("GuestListFull", new Vector2(0, 0), true);
+        
+        _guestListWidget.Draw();
     
-        float progress = (float)(_syncFileService.OverallDownloadProgress / 100.0);
+        ImGui.EndChild();
+    }
     
-        // Animated loading text
-        string[] spinner = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" };
-        int spinnerIndex = (int)(ImGui.GetTime() * 10) % spinner.Length;
+    private void DrawDownloadProgress(string progressText, double currentProgress, int active)
+    {
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, VenueColors.ProgressBackground);
+        ImGui.BeginChild("DownloadProgress", new Vector2(0, 65), true, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
     
-        ImGui.Text($"{spinner[spinnerIndex]} Downloading Mod Files");
-        ImGui.ProgressBar(progress, new Vector2(-1, 25), "");
+        int dotCount = ((int)(ImGui.GetTime() * 3) % 4);
+        string dots = new string('.', dotCount);
     
-        // Overlay text on progress bar
+        ImGui.Text($"Downloading{dots,-3}");
         ImGui.SameLine();
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(_syncFileService.OverallDownloadProgressString).X / 2 - ImGui.GetContentRegionAvail().X / 2);
-        ImGui.SetCursorPosY(ImGui.GetCursorPosY() - 21);
-        ImGui.TextColored(new Vector4(1.0f, 1.0f, 1.0f, 1.0f), _syncFileService.OverallDownloadProgressString);
+        ImGui.SetCursorPosX(ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize(progressText).X + ImGui.GetCursorPosX());
+        ImGui.TextColored(VenueColors.ProgressText, progressText);
+
+        float progress = (float)(currentProgress / 100.0);
     
-        ImGui.Text($"Files: {_syncFileService.ActiveDownloadCount} active");
-    
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(0.15f, 0.15f, 0.2f, 1.0f));
+        ImGui.PushStyleColor(ImGuiCol.PlotHistogram, VenueColors.ProgressBar);
+        ImGui.ProgressBar(progress, new Vector2(-1, 8), "");
         ImGui.PopStyleColor(2);
+
+        ImGui.Text($"{active} active file(s)");
+
+        ImGui.EndChild();
+        ImGui.PopStyleColor();
     
-        if (ImGui.Button("Cancel All##downloads", new Vector2(-1, 0)))
+        ImGui.PushStyleColor(ImGuiCol.Button, VenueColors.DisableButton);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, VenueColors.DisableButtonHover);
+        if (ImGui.Button("Cancel Downloads", new Vector2(-1, 30)))
         {
             _syncFileService.CancelAllDownloads();
         }
+        ImGui.PopStyleColor(2);
     }
 }

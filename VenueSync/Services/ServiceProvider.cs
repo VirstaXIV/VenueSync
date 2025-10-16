@@ -19,6 +19,7 @@ using VenueSync.Ui.Tabs.CharactersTab;
 using VenueSync.Ui.Tabs.HousesTab;
 using VenueSync.Ui.Tabs.SettingsTab;
 using VenueSync.Ui.Tabs.VenuesTab;
+using VenueSync.Ui.Widgets;
 
 namespace VenueSync.Services;
 
@@ -76,6 +77,7 @@ public static class ServiceProvider
                    .AddSingleton<SyncFileService>()
                    .AddSingleton<PluginWatcherService>()
                    .AddSingleton<ManipulationDataManager>()
+                   .AddSingleton<ChatService>()
                    .AddSingleton<CommandService>();
     
     private static ServiceManager AddIPC(this ServiceManager services)
@@ -90,6 +92,7 @@ public static class ServiceProvider
                    .AddSingleton<ReloadMods>()
                    .AddSingleton<DisableMods>()
                    .AddSingleton<LocationChanged>()
+                   .AddSingleton<DiceRoll>()
                    .AddSingleton<VenueEntered>()
                    .AddSingleton<VenueUpdated>()
                    .AddSingleton<VenueExited>();
@@ -122,6 +125,7 @@ public static class ServiceProvider
                    .AddSingleton<VenuesTab>()
                    .AddSingleton<HousesTab>()
                    .AddSingleton<CharactersTab>()
+                   .AddSingleton<GuestListWidget>()
                    .AddSingleton<MainWindowPosition>()
                    .AddSingleton<MainWindow>()
                    .AddSingleton<VenueWindowPosition>()

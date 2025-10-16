@@ -292,6 +292,7 @@ public class VenueService: IDisposable
         _stateService.VenueState.description = data.venue.description;
         _stateService.VenueState.open_hours = data.venue.open_hours;
         _stateService.VenueState.discord_invite = data.venue.discord_invite;
+        _stateService.VenueState.carrd_url = data.venue.carrd_url;
         _stateService.VenueState.staff = data.staff;
         _stateService.VenueState.tags = data.tags;
         _stateService.VenueState.streams = data.streams;
@@ -321,6 +322,7 @@ public class VenueService: IDisposable
         _stateService.VenueState.description = data.venue.description;
         _stateService.VenueState.open_hours = data.venue.open_hours;
         _stateService.VenueState.discord_invite = data.venue.discord_invite;
+        _stateService.VenueState.carrd_url = data.venue.carrd_url;
         _stateService.VenueState.staff = data.staff;
         _stateService.VenueState.tags = data.tags;
         _stateService.VenueState.streams = data.streams;

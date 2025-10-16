@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using VenueSync.Data;
 using VenueSync.Events;
 using VenueSync.State;
 using VenueSync.Ui;
@@ -17,19 +20,23 @@ public class TerritoryWatcher: IDisposable
     private readonly StateService _stateService;
     private readonly LocationService _locationService;
     private readonly HouseVerifyWindow _houseVerifyWindow;
+    private readonly ChatService _chatService;
+    private readonly IObjectTable _objectTable;
     
     private readonly ServiceConnected _serviceConnected;
     private readonly LocationChanged _locationChanged;
     private readonly VenueExited _venueExited;
+    private readonly DiceRoll _diceRoll;
 
     private bool _isInHouse = false;
     private bool _wasInHouse = false;
     public ushort CurrentTerritory;
     private bool _running = false;
+    private bool _justEntered = false;
     
-    public TerritoryWatcher(IFramework framework, IClientState clientState, SocketService socketService, StateService stateService, 
-        LocationService locationService, HouseVerifyWindow houseVerifyWindow,
-        ServiceConnected @serviceConnected, VenueExited @venueExited, LocationChanged @locationChanged)
+    public TerritoryWatcher(IFramework framework, IClientState clientState, SocketService socketService, StateService stateService, IObjectTable objectTable,
+        LocationService locationService, HouseVerifyWindow houseVerifyWindow, ChatService chatService,
+        ServiceConnected @serviceConnected, VenueExited @venueExited, LocationChanged @locationChanged, DiceRoll @diceRoll)
     {
         _framework = framework;
         _clientState = clientState;
@@ -37,13 +44,17 @@ public class TerritoryWatcher: IDisposable
         _stateService = stateService;
         _locationService = locationService;
         _houseVerifyWindow = houseVerifyWindow;
+        _chatService = chatService;
+        _objectTable = objectTable;
         
         _locationChanged = locationChanged;
         _serviceConnected = @serviceConnected;
         _venueExited = @venueExited;
+        _diceRoll = @diceRoll;
         
         _serviceConnected.Subscribe(OnConnection, ServiceConnected.Priority.None);
         _locationChanged.Subscribe(OnLocationChanged, LocationChanged.Priority.None);
+        _diceRoll.Subscribe(OnDiceRoll, DiceRoll.Priority.None);
         
         _framework.Update += OnFrameworkUpdate;
         _clientState.TerritoryChanged += OnTerritoryChanged;
@@ -145,6 +156,7 @@ public class TerritoryWatcher: IDisposable
                 try
                 {
                     SetCurrentHouse();
+                    CheckSeenPlayers();
                 }
                 catch
                 {
@@ -158,6 +170,71 @@ public class TerritoryWatcher: IDisposable
         }
         
         _running = false;
+    }
+
+    private void CheckSeenPlayers()
+    {
+        if (_stateService.VenueState.id != String.Empty)
+        {
+            int playerCount = 0;
+            Dictionary<string, bool> seenPlayers = new();
+            foreach (var o in _objectTable)
+            {
+                if (o is not IPlayerCharacter pc) continue;
+                if (pc.Name.TextValue.Length == 0) continue;
+                if (o.SubKind != 4) continue;
+                var player = Player.FromCharacter(pc);
+
+                playerCount++;
+
+                seenPlayers.Add(player.Name, true);
+
+                var isSelf = _stateService.PlayerState.name == player.Name;
+                if (_stateService.VisitorsState.players.TryAdd(player.Name, player))
+                {
+                    // New entry
+                    _chatService.ChatPlayerLink(player, " has come inside.");
+                }
+                else if (!_stateService.VisitorsState.players[player.Name].InHouse)
+                {
+                    // Returning Entry
+                    _stateService.VisitorsState.players[player.Name].InHouse = true;
+                    _stateService.VisitorsState.players[player.Name].LatestEntry = DateTime.Now;
+                    _stateService.VisitorsState.players[player.Name].TimeCursor = DateTime.Now;
+                    _stateService.VisitorsState.players[player.Name].EntryCount++;
+                    _chatService.ChatPlayerLink(player, " has come inside.");
+                }
+                else if (_justEntered)
+                {
+                    _stateService.VisitorsState.players[player.Name].TimeCursor = DateTime.Now;
+                }
+
+                _stateService.VisitorsState.players[player.Name].LastSeen = DateTime.Now;
+
+                if (_justEntered && isSelf)
+                {
+                    _stateService.VisitorsState.players[player.Name].LatestEntry = DateTime.Now;
+                }
+            }
+
+            foreach (var guest in _stateService.VisitorsState.players)
+            {
+                if (guest.Value.InHouse)
+                {
+                    if (!seenPlayers.ContainsKey(guest.Value.Name))
+                    {
+                        guest.Value.OnLeaveHouse();
+                    }
+                    else
+                    {
+                        guest.Value.OnAccumulateTime();
+                    }
+                }
+            }
+
+            _stateService.VisitorsState.count = playerCount;
+            _justEntered = false;
+        }
     }
 
     private unsafe void OnTerritoryChanged(ushort territory)
@@ -197,6 +274,15 @@ public class TerritoryWatcher: IDisposable
         if (_stateService.CurrentHouse.HouseId > 0)
         {
             SendLocation();
+        }
+    }
+
+    private void OnDiceRoll(DiceRollData roll)
+    {
+        if (_stateService.VisitorsState.players.ContainsKey(roll.name) && _stateService.VisitorsState.players[roll.name].InHouse)
+        {
+            _stateService.VisitorsState.players[roll.name].LastRoll = roll.roll;
+            _stateService.VisitorsState.players[roll.name].LastRollMax = roll.outOf == 0 ? 1000 : roll.outOf;
         }
     }
 
@@ -265,6 +351,7 @@ public class TerritoryWatcher: IDisposable
     private void EnteredHouse()
     {
         _wasInHouse = true;
+        _justEntered = true;
         VenueSync.Log.Debug("Player Entered House");
     }
     
@@ -281,6 +368,7 @@ public class TerritoryWatcher: IDisposable
                 mannequins = []
             }
         };
+        _stateService.VisitorsState = new VisitorsState();
         VenueSync.Log.Debug("Player Left House");
     }
     

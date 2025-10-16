@@ -12,6 +12,7 @@ public class StateService: IDisposable
     public required VenueState VenueState { get; set; }
     public required House CurrentHouse { get; set; }
     public required Mannequin ActiveMannequin { get; set; }
+    public required VisitorsState VisitorsState { get; set; }
     
     public StateService()
     {
@@ -55,5 +56,6 @@ public class StateService: IDisposable
         };
         CurrentHouse = new House();
         ActiveMannequin = new Mannequin();
+        VisitorsState = new VisitorsState();
     }
 }

@@ -3,21 +3,36 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Hooking;
+using Dalamud.Memory;
 using Dalamud.Plugin.Services;
+using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
+using FFXIVClientStructs.FFXIV.Component.Text;
+using FFXIVClientStructs.STD;
 using VenueSync.Events;
 
 namespace VenueSync.Services;
 
 public class GameStateService: IDisposable
 {
+    [Signature("E8 ?? ?? ?? ?? EB ?? 45 33 C9 4C 8B C6", DetourName = nameof(RandomPrintLogDetour))]
+    private Hook<RandomPrintLogDelegate>? RandomPrintLogHook { get; set; }
+    private unsafe delegate void RandomPrintLogDelegate(RaptureLogModule* module, int logMessageId, byte* playerName, byte sex, StdDeque<TextParameter>* parameter, byte flags, ushort homeWorldId);
+
+    [Signature("48 89 5C 24 ?? 48 89 74 24 ?? 55 57 41 54 41 55 41 56 48 8D 6C 24 ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 ?? 0F B7 75", DetourName = nameof(DicePrintLogDetour))]
+    private Hook<DicePrintLogDelegate>? DicePrintLogHook { get; set; }
+    private unsafe delegate void DicePrintLogDelegate(RaptureLogModule* module, ushort chatType, byte* userName, void* unused, ushort worldId, ulong accountId, ulong contentId, ushort roll, ushort outOf, uint entityId, byte ident);
+        
     private readonly IFramework _framework;
     private readonly IClientState _clientState;
     private readonly StateService _stateService;
     private readonly ICondition _condition;
+    private readonly IObjectTable _objectTable;
     
     private readonly LoggedIn _loggedInEvent;
     private readonly LoggedOut _loggedOutEvent;
+    private readonly DiceRoll _diceRoll;
     
     public bool IsAnythingDrawing { get; private set; } = false;
     public bool IsInCutscene { get; private set; } = false;
@@ -25,19 +40,25 @@ public class GameStateService: IDisposable
     public bool IsLoggedIn { get; private set; }
     public bool IsInCombatOrPerforming { get; private set; } = false;
     
-    public GameStateService(IFramework framework, IClientState clientState, ICondition condition, StateService stateService, LoggedIn @loggedIn, LoggedOut @loggedOut)
+    public GameStateService(IFramework framework, IClientState clientState, ICondition condition, IObjectTable objectTable, StateService stateService, 
+        LoggedIn @loggedIn, LoggedOut @loggedOut, DiceRoll @diceRoll)
     {
         _framework = framework;
         _clientState = clientState;
         _stateService = stateService;
         _condition = condition;
+        _objectTable = objectTable;
         
         _loggedInEvent = @loggedIn;
         _loggedOutEvent = @loggedOut;
+        _diceRoll = @diceRoll;
         
         VenueSync.Log.Debug($"Starting Client State Service.");
         StartFramework();
         StartLoginState();
+        
+        RandomPrintLogHook?.Enable();
+        DicePrintLogHook?.Enable();
     }
 
     private void StartFramework()
@@ -195,8 +216,59 @@ public class GameStateService: IDisposable
     
     public void Dispose()
     {
+        RandomPrintLogHook?.Dispose();
+        DicePrintLogHook?.Dispose();
         _framework.Update -= OnFrameworkUpdate;
         _clientState.Login -= OnLogin;
         _clientState.Logout -= OnLogout;
+    }
+    
+    private unsafe void RandomPrintLogDetour(RaptureLogModule* module, int logMessageId, byte* playerName, byte sex, StdDeque<TextParameter>* parameter, byte flags, ushort homeWorldId)
+    {
+        if (logMessageId != 856 && logMessageId != 3887)
+        {
+            RandomPrintLogHook!.Original(module, logMessageId, playerName, sex, parameter, flags, homeWorldId);
+            return;
+        }
+
+        try
+        {
+            var name = MemoryHelper.ReadStringNullTerminated((nint)playerName);
+            var roll = (*parameter)[1].IntValue;
+            var outOf = logMessageId == 3887 ? (*parameter)[2].IntValue : 0;
+
+            _diceRoll.Invoke(new DiceRollData() {
+                name = name, 
+                homeWorldId = homeWorldId, 
+                roll = roll, 
+                outOf = outOf
+            });
+        }
+        catch (Exception exception)
+        {
+            VenueSync.Log.Error($"Unable to process random roll: {exception.Message}");
+        }
+
+        RandomPrintLogHook!.Original(module, logMessageId, playerName, sex, parameter, flags, homeWorldId);
+    }
+
+    private unsafe void DicePrintLogDetour(RaptureLogModule* module, ushort chatType, byte* playerName, void* unused, ushort worldId, ulong accountId, ulong contentId, ushort roll, ushort outOf, uint entityId, byte ident)
+    {
+        try
+        {
+            var name = MemoryHelper.ReadStringNullTerminated((nint)playerName);
+            _diceRoll.Invoke(new DiceRollData() {
+                name = name, 
+                homeWorldId = worldId, 
+                roll = roll, 
+                outOf = outOf
+            });
+        }
+        catch (Exception exception)
+        {
+            VenueSync.Log.Error($"Unable to process dice roll: {exception.Message}");
+        }
+
+        DicePrintLogHook!.Original(module, chatType, playerName, unused, worldId, accountId, contentId, roll, outOf, entityId, ident);
     }
 }
