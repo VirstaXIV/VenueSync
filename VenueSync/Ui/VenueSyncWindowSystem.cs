@@ -37,6 +37,11 @@ public class VenueSyncWindowSystem: IDisposable
     {
         _venueWindow.Toggle();
     }
+    
+    public void ToggleMainWindow()
+    {
+        _mainWindow.Toggle();
+    }
 
     public void Dispose()
     {

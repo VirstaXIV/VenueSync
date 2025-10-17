@@ -11,6 +11,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Component.Text;
 using FFXIVClientStructs.STD;
 using VenueSync.Events;
+using VenueSync.Ui;
 
 namespace VenueSync.Services;
 
@@ -29,10 +30,12 @@ public class GameStateService: IDisposable
     private readonly StateService _stateService;
     private readonly ICondition _condition;
     private readonly IObjectTable _objectTable;
+    private readonly IGameInteropProvider _gameInteropProvider;
     
     private readonly LoggedIn _loggedInEvent;
     private readonly LoggedOut _loggedOutEvent;
     private readonly DiceRoll _diceRoll;
+    private readonly UpdateDtrBar _updateDtrBar;
     
     public bool IsAnythingDrawing { get; private set; } = false;
     public bool IsInCutscene { get; private set; } = false;
@@ -40,22 +43,27 @@ public class GameStateService: IDisposable
     public bool IsLoggedIn { get; private set; }
     public bool IsInCombatOrPerforming { get; private set; } = false;
     
-    public GameStateService(IFramework framework, IClientState clientState, ICondition condition, IObjectTable objectTable, StateService stateService, 
-        LoggedIn @loggedIn, LoggedOut @loggedOut, DiceRoll @diceRoll)
+    public GameStateService(IFramework framework, IClientState clientState, ICondition condition, IObjectTable objectTable, IGameInteropProvider gameInteropProvider,
+        StateService stateService,
+        LoggedIn @loggedIn, LoggedOut @loggedOut, DiceRoll @diceRoll, UpdateDtrBar @updateDtrBar)
     {
         _framework = framework;
         _clientState = clientState;
         _stateService = stateService;
         _condition = condition;
         _objectTable = objectTable;
+        _gameInteropProvider = gameInteropProvider;
         
         _loggedInEvent = @loggedIn;
         _loggedOutEvent = @loggedOut;
         _diceRoll = @diceRoll;
+        _updateDtrBar = @updateDtrBar;
         
         VenueSync.Log.Debug($"Starting Client State Service.");
         StartFramework();
         StartLoginState();
+        
+        _gameInteropProvider.InitializeFromAttributes(this);
         
         RandomPrintLogHook?.Enable();
         DicePrintLogHook?.Enable();
@@ -159,6 +167,8 @@ public class GameStateService: IDisposable
             {
                 return;
             }
+            
+            _updateDtrBar.Invoke();
             
             if (_clientState.IsGPosing && !IsInGpose)
             {

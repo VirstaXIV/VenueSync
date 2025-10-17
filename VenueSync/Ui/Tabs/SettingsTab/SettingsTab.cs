@@ -295,6 +295,9 @@ public class SettingsTab(Configuration configuration, StateService stateService,
 
         Checkbox("Open Main Window at Game Start"u8, "Whether the main VenueSync window should be open or closed after launching the game."u8,
                  configuration.OpenWindowAtStart, v => configuration.OpenWindowAtStart = v);
+        
+        Checkbox("Client Mode"u8, "If you are only interested in using VenueSync as a client, this will disable showing unneeded items in the UI."u8, configuration.ClientMode, v => configuration.ClientMode = v);
+        
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]

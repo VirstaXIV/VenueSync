@@ -10,10 +10,10 @@ namespace VenueSync;
 
 public class Configuration : IPluginConfiguration, ISavable
 {
-    [JsonIgnore]
-    public readonly EphemeralConfig Ephemeral;
-    
     public bool OpenWindowAtStart { get; set; } = false;
+    public bool ClientMode { get; set; } = true;
+    
+    public bool EnableDtrBar { get; set; } = true;
     public bool AutoConnect { get; set; } = true;
     public string ServerToken { get; set; } = string.Empty;
     public string ServerUserID { get; set; } = string.Empty;
@@ -24,10 +24,9 @@ public class Configuration : IPluginConfiguration, ISavable
 
     [JsonIgnore] private readonly SaveService _saveService;
 
-    public Configuration(SaveService saveService, EphemeralConfig ephemeral)
+    public Configuration(SaveService saveService)
     {
         _saveService = saveService;
-        Ephemeral = ephemeral;
         Load();
     }
 

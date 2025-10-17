@@ -7,7 +7,6 @@ public static class VenueColors
     // Headers and Titles
     public static readonly Vector4 VenueName = new(0.9f, 0.5f, 1f, 1f);
     public static readonly Vector4 SectionHeader = new(1f, 0.7f, 0.4f, 1f);
-    public static readonly Vector4 ModeratorHeader = new(1f, 0.5f, 0.5f, 1f);
     
     // Text Colors
     public static readonly Vector4 LocationText = new(0.4f, 0.8f, 1f, 1f);

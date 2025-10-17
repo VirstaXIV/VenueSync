@@ -53,6 +53,8 @@ public class MainWindow : Window, IDisposable
 
     private TabType _selectTab;
 
+    private TabType SelectedTab { get; set; } = TabType.Settings;
+
     public MainWindow(
         IDalamudPluginInterface pluginInterface, FileDialogManager fileDialogManager, Configuration configuration, StateService stateService,
         SettingsTab settings, VenueWindow venueWindow, VenuesTab venueTab, CharactersTab charactersTab, HousesTab housesTab,
@@ -81,7 +83,7 @@ public class MainWindow : Window, IDisposable
             _settings
         ];
 
-        _selectTab = _configuration.Ephemeral.SelectedTab;
+        _selectTab = SelectedTab;
         _event.Subscribe(OnTabSelected, TabSelected.Priority.MainWindow);
         IsOpen = _configuration.OpenWindowAtStart;
     }
@@ -109,7 +111,7 @@ public class MainWindow : Window, IDisposable
         _position.Size = ImGui.GetWindowSize();
         _position.Position = ImGui.GetWindowPos();
 
-        if (!_socketService.Connected)
+        if (!_socketService.Connected || _configuration.ClientMode)
         {
             _tabs = [
                 _settings
@@ -142,10 +144,9 @@ public class MainWindow : Window, IDisposable
             _selectTab = TabType.None;
         var tab = FromLabel(currentTab);
 
-        if (tab != _configuration.Ephemeral.SelectedTab)
+        if (tab != SelectedTab)
         {
-            _configuration.Ephemeral.SelectedTab = FromLabel(currentTab);
-            _configuration.Ephemeral.Save();
+            SelectedTab = FromLabel(currentTab);
         }
     }
 

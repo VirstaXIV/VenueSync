@@ -38,6 +38,7 @@ public sealed class VenueSync : IDalamudPlugin
             _services.GetService<GameStateService>();
             Log.Debug("Loading Windows");
             _services.GetService<VenueSyncWindowSystem>();
+            _services.GetService<DtrBarEntry>();
             Log.Debug("Loading Commands");
             _services.GetService<CommandService>();
             Log.Debug("Loading Territory Watcher");

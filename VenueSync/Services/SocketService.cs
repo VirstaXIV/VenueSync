@@ -273,6 +273,7 @@ public class SocketService: IDisposable
     {
         if (CheckToken())
         {
+            _stateService.Connection.Connecting = true;
             try
             {
                 VenueSync.Log.Debug($"Trying to connect to service.");
@@ -287,11 +288,13 @@ public class SocketService: IDisposable
                     {
                         await AddChannel($"private-user.{userId}");
                         _stateService.Connection.Connected = true;
+                        _stateService.Connection.Connecting = false;
                         _serviceConnected.Invoke();
                     }
                     else
                     {
                         VenueSync.Log.Warning($"No User ID was found.");
+                        _stateService.Connection.Connecting = false;
                     }
                     VenueSync.Log.Debug($"Connected to service.");
                 }
@@ -305,11 +308,15 @@ public class SocketService: IDisposable
                     {
                         VenueSync.Log.Debug($"Failed to connect to VenueSync Service");
                     }
+                    
+                    _stateService.Connection.Connecting = false;
                 }
             }
             catch (Exception ex)
             {
                 VenueSync.Log.Warning($"Could not connect to socket: {ex.Message}");
+                
+                _stateService.Connection.Connecting = false;
             }
         }
         else
@@ -323,17 +330,20 @@ public class SocketService: IDisposable
         ManualDisconnect = manual;
         try
         {
+            _stateService.Connection.Disconnecting = true;
             VenueSync.Log.Debug($"Trying to disconnect from service.");
             GetPusher().UnbindAll();
             await GetPusher().UnsubscribeAllAsync().ConfigureAwait(false);
             _channels.Clear();
             await GetPusher().DisconnectAsync().ConfigureAwait(false);
             _stateService.Connection.Connected = false;
+            _stateService.Connection.Disconnecting = false;
             VenueSync.Log.Debug($"Disconnected from service.");
         }
         catch (Exception)
         {
             VenueSync.Log.Warning($"Could not disconnect from socket.");
+            _stateService.Connection.Disconnecting = false;
         }
     }
 
