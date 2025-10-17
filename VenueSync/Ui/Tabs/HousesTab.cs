@@ -6,7 +6,7 @@ using OtterGui.Widgets;
 using VenueSync.Services;
 using VenueSync.State;
 
-namespace VenueSync.Ui.Tabs.HousesTab;
+namespace VenueSync.Ui.Tabs;
 
 public class HousesTab(StateService stateService, HouseVerifyWindow houseVerifyWindow, ManageMannequinsWindow manageMannequinsWindow): ITab
 {

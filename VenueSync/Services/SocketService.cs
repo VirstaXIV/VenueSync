@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
@@ -13,23 +14,39 @@ using VenueSync.Events;
 
 namespace VenueSync.Services;
 
-class VenueSyncHttpUserAuthenticator(string authEndpoint, Configuration configuration) : HttpUserAuthenticator(authEndpoint)
+class VenueSyncHttpUserAuthenticator : HttpUserAuthenticator
 {
+    private readonly Configuration _configuration;
+
+    public VenueSyncHttpUserAuthenticator(string authEndpoint, Configuration configuration) 
+        : base(authEndpoint)
+    {
+        _configuration = configuration;
+    }
+
     public override void PreRequest(HttpClient httpClient)
     {
         base.PreRequest(httpClient);
-
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", configuration.ServerToken);
+        httpClient.DefaultRequestHeaders.Authorization = 
+            new AuthenticationHeaderValue("Bearer", _configuration.ServerToken);
     }
 }
 
-class VenueSyncHttpAuthenticator(string authEndpoint, Configuration configuration) : HttpAuthorizer(authEndpoint)
+class VenueSyncHttpAuthenticator : HttpAuthorizer
 {
+    private readonly Configuration _configuration;
+
+    public VenueSyncHttpAuthenticator(string authEndpoint, Configuration configuration) 
+        : base(authEndpoint)
+    {
+        _configuration = configuration;
+    }
+
     public override void PreAuthorize(HttpClient httpClient)
     {
         base.PreAuthorize(httpClient);
-
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", configuration.ServerToken);
+        httpClient.DefaultRequestHeaders.Authorization = 
+            new AuthenticationHeaderValue("Bearer", _configuration.ServerToken);
     }
 }
 
@@ -44,40 +61,46 @@ public class SocketService: IDisposable
     private readonly VenueExited _venueExited;
     private readonly VenueUpdated _venueUpdated;
     private readonly ServiceConnected _serviceConnected;
+    private readonly ServiceDisconnected _serviceDisconnected;
     private readonly LoggedIn _loggedIn;
     private readonly LoggedOut _loggedOut;
-    private Pusher? pusher { get; set; } = null;
-    private readonly Dictionary<string, Channel> _channels = new();
-    private bool _shouldConnect = false;
     
-    public bool Connected = false;
-    public bool WasConnected = false;
-    public bool Loaded = false;
-    public int ReconnectAttempts = 0;
-    public bool ManualDisconnect = false;
+    private Pusher? _pusher;
+    private readonly Dictionary<string, Channel> _channels = new();
+    private readonly SemaphoreSlim _connectionLock = new(1, 1);
+    private readonly SemaphoreSlim _channelLock = new(1, 1);
+    
+    private bool _shouldAutoConnect;
+    private bool _isManualDisconnect;
+    private bool _isDisposed;
+    private CancellationTokenSource? _reconnectCts;
 
     public SocketService(
-        Configuration configuration, GameStateService gameStateService,
-        StateService stateService, AccountService accountService,
-        ServiceConnected @serviceConnected, VenueEntered @venueEntered, LoggedIn @loggedIn, LoggedOut @loggedOut,
-        VenueUpdated @venueUpdated, VenueExited @venueExited)
+        Configuration configuration, 
+        GameStateService gameStateService,
+        StateService stateService, 
+        AccountService accountService,
+        ServiceConnected serviceConnected, 
+        ServiceDisconnected serviceDisconnected, 
+        VenueEntered venueEntered, 
+        LoggedIn loggedIn, 
+        LoggedOut loggedOut,
+        VenueUpdated venueUpdated, 
+        VenueExited venueExited)
     {
         _gameStateService = gameStateService;
         _configuration = configuration;
         _stateService = stateService;
         _accountService = accountService;
+        _serviceConnected = serviceConnected;
+        _serviceDisconnected = serviceDisconnected;
+        _venueEntered = venueEntered;
+        _venueUpdated = venueUpdated;
+        _venueExited = venueExited;
+        _loggedIn = loggedIn;
+        _loggedOut = loggedOut;
 
-        _serviceConnected = @serviceConnected;
-        _venueEntered = @venueEntered;
-        _venueUpdated = @venueUpdated;
-        _venueExited = @venueExited;
-        _loggedIn = @loggedIn;
-        _loggedOut = @loggedOut;
-
-        if (_configuration.AutoConnect)
-        {
-            _shouldConnect = true;
-        }
+        _shouldAutoConnect = _configuration.AutoConnect;
 
         _loggedIn.Subscribe(OnLoggedIn, LoggedIn.Priority.High);
         _loggedOut.Subscribe(OnLoggedOut, LoggedOut.Priority.High);
@@ -86,335 +109,474 @@ public class SocketService: IDisposable
 
     private void OnLoggedIn()
     {
-        VenueSync.Log.Debug($"Checking to auto connect on login.");
-        _ = Task.Run(async () => await _gameStateService.RunOnFrameworkThread(() =>
+        if (!_shouldAutoConnect) return;
+
+        VenueSync.Log.Debug("Running auto connect on login");
+        _shouldAutoConnect = false;
+        
+        _ = Task.Run(async () =>
+        {
+            await _gameStateService.RunOnFrameworkThread(() =>
             {
-                if (_shouldConnect)
-                {
-                    VenueSync.Log.Debug("Running Auto connect");
-                    _shouldConnect = false;
-                    _ = Task.Run(async () => await Connect());
-                }
-            }).ConfigureAwait(false)
-        );
+                _ = Task.Run(async () => await ConnectAsync().ConfigureAwait(false));
+            }).ConfigureAwait(false);
+        });
     }
 
     private void OnLoggedOut()
     {
-        VenueSync.Log.Debug($"Logging out, clearing connection.");
-        _ = Task.Run(async () => await Disconnect());
+        VenueSync.Log.Debug("Logging out, disconnecting from service");
+        _ = Task.Run(async () => await DisconnectAsync().ConfigureAwait(false));
     }
 
     private void OnVenueExited(string id)
     {
-        VenueSync.Log.Debug($"Leaving venue channel.");
-        _ = Task.Run(async () => await RemoveChannel($"venue.{id}").ConfigureAwait(false));
+        VenueSync.Log.Debug($"Leaving venue channel: {id}");
+        _ = Task.Run(async () => await RemoveChannelAsync($"venue.{id}").ConfigureAwait(false));
     }
-
-    private Pusher GetPusher()
+    
+    private Pusher CreatePusher()
     {
-        if (Loaded && pusher?.GetType() == typeof(Pusher))
+        var pusher = new Pusher(Configuration.Constants.SOCKET_APP_KEY, new PusherOptions
         {
-            return pusher;
-        }
-        
-        return Load();
-    }
-
-    private Pusher Load()
-    {
-        pusher = new Pusher(Configuration.Constants.SOCKET_APP_KEY, new PusherOptions
-        {
-            UserAuthenticator = new VenueSyncHttpUserAuthenticator(Configuration.Constants.SOCKET_USER_AUTH, _configuration),
-            Authorizer = new VenueSyncHttpAuthenticator(Configuration.Constants.SOCKET_CHANNEL_AUTH, _configuration),
-            Host = Configuration.Constants.SOCKET_HOST + ":" + Configuration.Constants.SOCKET_PORT,
+            UserAuthenticator = new VenueSyncHttpUserAuthenticator(
+                Configuration.Constants.SOCKET_USER_AUTH, _configuration),
+            Authorizer = new VenueSyncHttpAuthenticator(
+                Configuration.Constants.SOCKET_CHANNEL_AUTH, _configuration),
+            Host = $"{Configuration.Constants.SOCKET_HOST}:{Configuration.Constants.SOCKET_PORT}",
             Encrypted = Configuration.Constants.SOCKET_SCHEME == "https",
             ClientTimeout = TimeSpan.FromSeconds(20),
         });
-        pusher.ConnectionStateChanged += ConnectionStateChanged;
-        pusher.Error += HandleError;
-        
-        Loaded = true;
-        
+
+        pusher.ConnectionStateChanged += OnConnectionStateChanged;
+        pusher.Error += OnPusherError;
+
         return pusher;
     }
-
-    private void HandleError(object sender, PusherException error)
+    
+    private void OnPusherError(object? sender, PusherException error)
     {
-        if (error is ChannelUnauthorizedException unauthorizedAccess)
+        switch (error)
         {
-            // Private and Presence channel failed authorization with Forbidden (403)
-            VenueSync.Log.Warning($"Could not enter channel: {unauthorizedAccess.AuthorizationEndpoint} (403)");
-        }
-        else if (error is ChannelAuthorizationFailureException httpError)
-        {
-            // Authorization endpoint returned an HTTP error other than Forbidden (403)
-            VenueSync.Log.Warning($"Could not authorize: {httpError.AuthorizationEndpoint} (403)");
-        }
-        else if (error is OperationTimeoutException timeoutError)
-        {
-            // A client operation has timed-out. Governed by PusherOptions.ClientTimeout
-            VenueSync.Log.Warning($"Connection Timed out: {timeoutError.Message}");
-        }
-        else if (error is ChannelDecryptionException decryptionError)
-        {
-            // Failed to decrypt the data for a private encrypted channel
-            VenueSync.Log.Warning($"Decrypt Error: {decryptionError.Message}");
-        }
-        else
-        {
-            VenueSync.Log.Warning($"Unknown Error: {error.Message}");
+            case ChannelUnauthorizedException unauthorizedAccess:
+                VenueSync.Log.Warning($"Channel authorization failed: {unauthorizedAccess.AuthorizationEndpoint} (403)");
+                break;
+            case ChannelAuthorizationFailureException httpError:
+                VenueSync.Log.Warning($"Authorization endpoint error: {httpError.AuthorizationEndpoint}");
+                break;
+            case OperationTimeoutException timeoutError:
+                VenueSync.Log.Warning($"Connection timed out: {timeoutError.Message}");
+                break;
+            case ChannelDecryptionException decryptionError:
+                VenueSync.Log.Warning($"Decryption error: {decryptionError.Message}");
+                break;
+            default:
+                VenueSync.Log.Warning($"Service error: {error.Message}");
+                break;
         }
     }
-
-    async private Task AddChannel(string channelName)
+    
+    private async Task AddChannelAsync(string channelName)
     {
+        if (_isDisposed)
+        {
+            VenueSync.Log.Debug($"Cannot add channel {channelName}: service is disposed");
+            return;
+        }
+
+        var pusher = _pusher;
+        if (pusher == null)
+        {
+            VenueSync.Log.Warning($"Cannot add channel {channelName}: pusher instance is null");
+            return;
+        }
+
+        await _channelLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            Channel channel = await GetPusher().SubscribeAsync(channelName).ConfigureAwait(false);
-            channel.BindAll(Listener);
-            _channels.Add(channelName, channel);
-            
-            VenueSync.Log.Debug($"Added VenueSync channel");
-        }
-        catch (ChannelUnauthorizedException)
-        {
-            VenueSync.Log.Warning($"Could not enter VenueSync channel");
-        }
-        catch (Exception)
-        {
-            VenueSync.Log.Warning($"Could not enter VenueSync channel");
-        }
-    }
-
-    public async Task RemoveChannel(string channelName)
-    {
-        try
-        {
-            var channel = _channels.GetValueOrDefault(channelName);
-            channel?.UnbindAll();
-            await GetPusher().UnsubscribeAsync(channelName).ConfigureAwait(false);
-            _channels.Remove(channelName);
-            
-            VenueSync.Log.Debug($"Left channel: {channelName}");
-        }
-        catch (ChannelUnauthorizedException)
-        {
-            VenueSync.Log.Warning($"Could not leave channel: {channelName}");
-        }
-        catch (Exception)
-        {
-            VenueSync.Log.Warning($"Could not leave channel: {channelName}");
-        }
-    }
-
-    private void ConnectionStateChanged(object sender, ConnectionState state)
-    {
-        Connected = state switch {
-            ConnectionState.Connected => true,
-            ConnectionState.Disconnected => false,
-            _ => Connected
-        };
-
-        if (Connected && !WasConnected)
-        {
-            WasConnected = true;
-            VenueSync.Messager.NotificationMessage($"Connected to VenueSync Service.", NotificationType.Success);
-        }
-        else
-        {
-            if (!WasConnected)
+            // Check if channel already exists
+            if (_channels.ContainsKey(channelName))
             {
+                VenueSync.Log.Debug($"Channel {channelName} already subscribed");
                 return;
             }
-            WasConnected = false;
-            VenueSync.Messager.NotificationMessage($"Disconnected from VenueSync Service.", NotificationType.Info);
 
-            if (!ManualDisconnect && !Connected)
-            {
-                VenueSync.Log.Debug($"Reconnect triggered by {state}");
-                RunReconnects();
-            }
+            var channel = await pusher.SubscribeAsync(channelName).ConfigureAwait(false);
+            channel.BindAll(OnEventReceived);
+            _channels[channelName] = channel;
+        
+            VenueSync.Log.Debug($"Subscribed to channel: {channelName}");
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Warning($"Failed to subscribe to channel {channelName}: {ex.Message}");
+        }
+        finally
+        {
+            _channelLock.Release();
         }
     }
-
-    private bool CheckToken()
+    
+    private async Task RemoveChannelAsync(string channelName)
     {
-        return !_configuration.ServerToken.IsNullOrEmpty();
-    }
-
-    private string GetUserID()
-    {
-        return _configuration.ServerUserID;
-    }
-
-    private void Listener(string eventName, PusherEvent eventData)
-    {
-        if (eventName == "venue.entered")
+        var pusher = _pusher;
+        if (pusher == null)
         {
-            var data = JsonConvert.DeserializeObject<VenueEnteredData>(eventData.Data);
-            if (data != null)
-            {
-                _venueEntered.Invoke(data);
-                _ = Task.Run(async () => await AddChannel($"venue.{data.venue.id}").ConfigureAwait(false));
-            }
-        } else if (eventName == "venue.updated")
-        {
-            var data = JsonConvert.DeserializeObject<VenueUpdatedData>(eventData.Data);
-            if (data != null)
-            {
-                _venueUpdated.Invoke(data);
-            }
+            VenueSync.Log.Debug($"Cannot remove channel {channelName}: pusher instance is null");
+            return;
         }
-        VenueSync.Log.Debug($"Got event: {eventName}");
-    }
 
-    public async Task Connect()
-    {
-        if (CheckToken())
-        {
-            _stateService.Connection.Connecting = true;
-            try
-            {
-                VenueSync.Log.Debug($"Trying to connect to service.");
-                var checkUser = await _accountService.User();
-                if (checkUser.Success)
-                {
-                    await GetPusher().ConnectAsync().ConfigureAwait(false);
-                    
-                    var userId = GetUserID();
-
-                    if (!userId.IsNullOrEmpty())
-                    {
-                        await AddChannel($"private-user.{userId}");
-                        _stateService.Connection.Connected = true;
-                        _stateService.Connection.Connecting = false;
-                        _serviceConnected.Invoke();
-                    }
-                    else
-                    {
-                        VenueSync.Log.Warning($"No User ID was found.");
-                        _stateService.Connection.Connecting = false;
-                    }
-                    VenueSync.Log.Debug($"Connected to service.");
-                }
-                else
-                {
-                    if (!checkUser.Graceful)
-                    {
-                        VenueSync.Log.Warning($"Failed to connect to VenueSync Service: {checkUser.ErrorMessage}");
-                    }
-                    else
-                    {
-                        VenueSync.Log.Debug($"Failed to connect to VenueSync Service");
-                    }
-                    
-                    _stateService.Connection.Connecting = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                VenueSync.Log.Warning($"Could not connect to socket: {ex.Message}");
-                
-                _stateService.Connection.Connecting = false;
-            }
-        }
-        else
-        {
-            VenueSync.Log.Warning($"Tried to connect without token.");
-        }
-    }
-
-    public async Task Disconnect(bool manual = false)
-    {
-        ManualDisconnect = manual;
+        await _channelLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            _stateService.Connection.Disconnecting = true;
-            VenueSync.Log.Debug($"Trying to disconnect from service.");
-            GetPusher().UnbindAll();
-            await GetPusher().UnsubscribeAllAsync().ConfigureAwait(false);
-            _channels.Clear();
-            await GetPusher().DisconnectAsync().ConfigureAwait(false);
-            _stateService.Connection.Connected = false;
-            _stateService.Connection.Disconnecting = false;
-            VenueSync.Log.Debug($"Disconnected from service.");
-        }
-        catch (Exception)
-        {
-            VenueSync.Log.Warning($"Could not disconnect from socket.");
-            _stateService.Connection.Disconnecting = false;
-        }
-    }
-
-    public void Dispose()
-    {
-        Task.Run(async () =>
-        {
-            await Disconnect();
-            GetPusher().ConnectionStateChanged -= ConnectionStateChanged;
-            GetPusher().Error -= HandleError;
-        });
-    }
-
-    private void RunReconnects()
-    {
-        CancellationToken cancellationToken = CancellationToken.None;
-        Task.Run(async () =>
-        {
-            if (ReconnectAttempts < 5)
+            if (_channels.TryGetValue(channelName, out var channel))
             {
-                const int maxAttempts = 5;
-                for (int i = 0; i < maxAttempts; i++)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (await ForceResetConnection())
-                    {
-                        return;
-                    }
-
-                    await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(false);
-
-                    if (i == maxAttempts - 1)
-                    {
-                        VenueSync.Log.Error($"Too many reconnects attempts, manually reconnect or try again later.");
-                    }
-                }
+                channel?.UnbindAll();
+                _channels.Remove(channelName);
             }
             else
             {
-                VenueSync.Log.Error($"Too many reconnects attempts, manually reconnect or try again later.");
+                VenueSync.Log.Debug($"Channel {channelName} not found in subscribed channels");
             }
-        }, cancellationToken);
-    }
 
-    async private Task<bool> ForceResetConnection()
+            await pusher.UnsubscribeAsync(channelName).ConfigureAwait(false);
+            VenueSync.Log.Debug($"Unsubscribed from channel: {channelName}");
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Warning($"Failed to unsubscribe from channel {channelName}: {ex.Message}");
+        }
+        finally
+        {
+            _channelLock.Release();
+        }
+    }
+    private void OnConnectionStateChanged(object? sender, ConnectionState state)
     {
-        if (!Loaded) return false;
-        VenueSync.Log.Debug("Reconnect called");
+        var isConnected = state == ConnectionState.Connected;
+        var wasConnected = _stateService.Connection.Connected;
+
+        _stateService.Connection.Connected = isConnected;
+
+        if (isConnected && !wasConnected)
+        {
+            VenueSync.Messager.NotificationMessage("Connected to VenueSync Service.", NotificationType.Success);
+        }
+        else if (!isConnected && wasConnected)
+        {
+            VenueSync.Messager.NotificationMessage("Disconnected from VenueSync Service.", NotificationType.Info);
+
+            if (!_isManualDisconnect)
+            {
+                VenueSync.Log.Debug($"Unexpected disconnection ({state}), initiating reconnect");
+                _ = Task.Run(StartReconnectAsync);
+            }
+        }
+    }
+    
+    private void OnEventReceived(string eventName, PusherEvent eventData)
+    {
+        VenueSync.Log.Debug($"Received event: {eventName}");
 
         try
         {
-            await Disconnect();
-            await Connect();
-
-            if (_stateService.Connection.Connected)
+            switch (eventName)
             {
-                VenueSync.Log.Debug("Reconnect completed successfully");
-                ReconnectAttempts = 0;
+                case "venue.entered":
+                    var enteredData = JsonConvert.DeserializeObject<VenueEnteredData>(eventData.Data);
+                    if (enteredData != null)
+                    {
+                        _venueEntered.Invoke(enteredData);
+                        _ = Task.Run(async () => 
+                                         await AddChannelAsync($"venue.{enteredData.venue.id}").ConfigureAwait(false));
+                    }
+                    break;
 
-                return true;
+                case "venue.updated":
+                    var updatedData = JsonConvert.DeserializeObject<VenueUpdatedData>(eventData.Data);
+                    if (updatedData != null)
+                    {
+                        _venueUpdated.Invoke(updatedData);
+                    }
+                    break;
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            VenueSync.Log.Error("Failure during Reconnect, disconnecting");
+            VenueSync.Log.Error($"Error processing event {eventName}: {ex.Message}");
         }
+    }
+    
+    public async Task ConnectAsync()
+    {
+        if (_isDisposed)
+        {
+            VenueSync.Log.Warning("Cannot connect: service is disposed");
+            return;
+        }
+
+        await _connectionLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_stateService.Connection.Connected)
+            {
+                VenueSync.Log.Debug("Already connected");
+                return;
+            }
+
+            if (_configuration.ServerToken.IsNullOrEmpty())
+            {
+                VenueSync.Log.Warning("Cannot connect: server token not configured");
+                return;
+            }
+
+            _stateService.Connection.Connecting = true;
+            _isManualDisconnect = false;
+
+            try
+            {
+                VenueSync.Log.Debug("Verifying user credentials...");
+                var userCheck = await _accountService.User().ConfigureAwait(false);
+                
+                if (!userCheck.Success)
+                {
+                    if (!userCheck.Graceful)
+                    {
+                        VenueSync.Log.Warning($"Failed to verify user: {userCheck.ErrorMessage}");
+                    }
+                    return;
+                }
+
+                if (_configuration.ServerUserID.IsNullOrEmpty())
+                {
+                    VenueSync.Log.Warning("Cannot connect: user ID not set");
+                    return;
+                }
+
+                if (_pusher == null)
+                {
+                    _pusher = CreatePusher();
+                }
+
+                VenueSync.Log.Debug("Connecting to Service...");
+                await _pusher.ConnectAsync().ConfigureAwait(false);
+
+                await AddChannelAsync($"private-user.{_configuration.ServerUserID}").ConfigureAwait(false);
+
+                _serviceConnected.Invoke();
+
+                VenueSync.Log.Debug("Successfully connected to service");
+            }
+            catch (Exception ex)
+            {
+                VenueSync.Log.Error($"Failed to connect: {ex.Message}");
+                await CleanupConnectionAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                _stateService.Connection.Connecting = false;
+            }
+        }
+        finally
+        {
+            _connectionLock.Release();
+        }
+    }
+    
+    public async Task DisconnectAsync(bool manual = false)
+    {
+        await _connectionLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            _isManualDisconnect = manual;
+            
+            _reconnectCts?.Cancel();
+            _reconnectCts?.Dispose();
+            _reconnectCts = null;
+
+            if (_pusher == null) return;
+
+            _stateService.Connection.Disconnecting = true;
+
+            try
+            {
+                VenueSync.Log.Debug("Disconnecting from service...");
+                await CleanupConnectionAsync().ConfigureAwait(false);
+                VenueSync.Log.Debug("Successfully disconnected");
+            }
+            catch (Exception ex)
+            {
+                VenueSync.Log.Warning($"Error during disconnect: {ex.Message}");
+            }
+            finally
+            {
+                _stateService.Connection.Connected = false;
+                _stateService.Connection.Disconnecting = false;
+                _serviceDisconnected.Invoke();
+            }
+        }
+        finally
+        {
+            _connectionLock.Release();
+        }
+    }
+    
+    private async Task CleanupConnectionAsync()
+    {
+        var pusher = _pusher;
+        if (pusher == null) return;
+
+        await _channelLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            foreach (var channel in _channels.Values.ToList())
+            {
+                try
+                {
+                    channel?.UnbindAll();
+                }
+                catch (Exception ex)
+                {
+                    VenueSync.Log.Debug($"Error unbinding channel: {ex.Message}");
+                }
+            }
+            _channels.Clear();
+
+            try
+            {
+                await pusher.UnsubscribeAllAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                VenueSync.Log.Debug($"Error unsubscribing channels: {ex.Message}");
+            }
+
+            try
+            {
+                pusher.UnbindAll();
+            }
+            catch (Exception ex)
+            {
+                VenueSync.Log.Debug($"Error unbinding events: {ex.Message}");
+            }
+
+            try
+            {
+                await pusher.DisconnectAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                VenueSync.Log.Debug($"Error disconnecting: {ex.Message}");
+            }
+
+            try
+            {
+                pusher.ConnectionStateChanged -= OnConnectionStateChanged;
+                pusher.Error -= OnPusherError;
+            }
+            catch (Exception ex)
+            {
+                VenueSync.Log.Debug($"Error removing event handlers: {ex.Message}");
+            }
+
+            _pusher = null;
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Warning($"Error during cleanup: {ex.Message}");
+        }
+        finally
+        {
+            _channelLock.Release();
+        }
+    }
+    
+    private async Task StartReconnectAsync()
+    {
+        const int maxAttempts = 5;
+        const int delaySeconds = 15;
+
+        _reconnectCts?.Cancel();
+        _reconnectCts?.Dispose();
+        _reconnectCts = new CancellationTokenSource();
         
-        await Disconnect();
-        ReconnectAttempts += 1;
-        
-        return false;
+        var cancellationToken = _reconnectCts.Token;
+
+        try
+        {
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                if (cancellationToken.IsCancellationRequested || _isDisposed)
+                {
+                    VenueSync.Log.Debug("Reconnection cancelled");
+                    return;
+                }
+
+                VenueSync.Log.Debug($"Reconnection attempt {attempt}/{maxAttempts}");
+
+                if (await TryReconnectAsync().ConfigureAwait(false))
+                {
+                    VenueSync.Log.Debug("Reconnection successful");
+                    return;
+                }
+
+                if (attempt < maxAttempts)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken)
+                              .ConfigureAwait(false);
+                }
+            }
+
+            VenueSync.Log.Error("Max reconnection attempts reached. Please reconnect manually.");
+        }
+        catch (OperationCanceledException)
+        {
+            VenueSync.Log.Debug("Reconnection cancelled");
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Error($"Error during reconnection: {ex.Message}");
+        }
+    }
+    
+    private async Task<bool> TryReconnectAsync()
+    {
+        try
+        {
+            await CleanupConnectionAsync().ConfigureAwait(false);
+            await ConnectAsync().ConfigureAwait(false);
+            return _stateService.Connection.Connected;
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Warning($"Reconnection failed: {ex.Message}");
+            return false;
+        }
+    }
+    
+    public void Dispose()
+    {
+        if (_isDisposed) return;
+        _isDisposed = true;
+
+        _loggedIn.Unsubscribe(OnLoggedIn);
+        _loggedOut.Unsubscribe(OnLoggedOut);
+        _venueExited.Unsubscribe(OnVenueExited);
+
+        _reconnectCts?.Cancel();
+        _reconnectCts?.Dispose();
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await DisconnectAsync(manual: true).ConfigureAwait(false);
+            }
+            finally
+            {
+                _connectionLock.Dispose();
+                _channelLock.Dispose();
+            }
+        }).Wait(TimeSpan.FromSeconds(5));
     }
 }

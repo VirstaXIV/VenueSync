@@ -5,22 +5,18 @@ using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using OtterGui.Services;
-using OtterGui.Text;
 using OtterGui.Widgets;
 using VenueSync.Events;
 using VenueSync.Services;
-using VenueSync.Ui.Tabs.CharactersTab;
-using VenueSync.Ui.Tabs.HousesTab;
-using VenueSync.Ui.Tabs.SettingsTab;
-using VenueSync.Ui.Tabs.VenuesTab;
+using VenueSync.Ui.Tabs;
 
 namespace VenueSync.Ui;
 
 public class MainWindowPosition : IService
 {
-    public bool    IsOpen   { get; set; }
+    public bool IsOpen { get; set; }
     public Vector2 Position { get; set; }
-    public Vector2 Size     { get; set; }
+    public Vector2 Size { get; set; }
 }
 
 public class MainWindow : Window, IDisposable
@@ -36,54 +32,57 @@ public class MainWindow : Window, IDisposable
 
     private readonly FileDialogManager _fileDialogManager;
     private readonly Configuration _configuration;
-    private readonly SocketService _socketService;
     private readonly StateService _stateService;
     private readonly VenueWindow _venueWindow;
-    
     private readonly TabSelected _event;
     private readonly LocationChanged _locationChanged;
-    
     private readonly MainWindowPosition _position;
-    private ITab[] _tabs;
 
     private readonly SettingsTab _settings;
     private readonly VenuesTab _venues;
     private readonly HousesTab _houses;
     private readonly CharactersTab _characters;
 
+    private ITab[] _tabs;
     private TabType _selectTab;
 
-    private TabType SelectedTab { get; set; } = TabType.Settings;
-
     public MainWindow(
-        IDalamudPluginInterface pluginInterface, FileDialogManager fileDialogManager, Configuration configuration, StateService stateService,
-        SettingsTab settings, VenueWindow venueWindow, VenuesTab venueTab, CharactersTab charactersTab, HousesTab housesTab,
-        TabSelected @event, LocationChanged @locationChanged, MainWindowPosition position, SocketService socketService) : base("VenueSyncMainWindow")
+        IDalamudPluginInterface pluginInterface,
+        FileDialogManager fileDialogManager,
+        Configuration configuration,
+        StateService stateService,
+        SettingsTab settings,
+        VenueWindow venueWindow,
+        VenuesTab venueTab,
+        CharactersTab charactersTab,
+        HousesTab housesTab,
+        TabSelected @event,
+        LocationChanged locationChanged,
+        MainWindowPosition position) : base("VenueSyncMainWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
-        SizeConstraints = new WindowSizeConstraints() {
+        SizeConstraints = new WindowSizeConstraints
+        {
             MinimumSize = new Vector2(600, 400),
-            MaximumSize = new Vector2(600, 400),
+            MaximumSize = new Vector2(600, 400)
         };
+
+        _fileDialogManager = fileDialogManager;
+        _configuration = configuration;
+        _stateService = stateService;
+        _venueWindow = venueWindow;
+        _event = @event;
+        _locationChanged = locationChanged;
+        _position = position;
+
         _settings = settings;
         _venues = venueTab;
         _houses = housesTab;
         _characters = charactersTab;
-        _fileDialogManager = fileDialogManager;
-        _configuration = configuration;
-        _socketService = socketService;
-        _stateService = stateService;
-        _venueWindow = venueWindow;
-        
-        _event = @event;
-        _locationChanged = @locationChanged;
-        
-        _position = position;
-        _tabs = [
-            _settings
-        ];
 
-        _selectTab = SelectedTab;
+        _tabs = [_settings];
+        _selectTab = TabType.Settings;
+
         _event.Subscribe(OnTabSelected, TabSelected.Priority.MainWindow);
         IsOpen = _configuration.OpenWindowAtStart;
     }
@@ -111,64 +110,70 @@ public class MainWindow : Window, IDisposable
         _position.Size = ImGui.GetWindowSize();
         _position.Position = ImGui.GetWindowPos();
 
-        if (!_socketService.Connected || _configuration.ClientMode)
+        DrawVenueButtons();
+
+        if (IsClientMode())
         {
-            _tabs = [
-                _settings
-            ];
+            DrawClientModeContent();
         }
         else
         {
-            _tabs = [
-                _characters,
-                _houses,
-                _venues,
-                _settings
-            ];
+            DrawTabs();
+        }
+    }
+
+    private bool IsClientMode()
+    {
+        return !_stateService.Connection.Connected || _configuration.ClientMode;
+    }
+
+    private void DrawClientModeContent()
+    {
+        ImGui.Spacing();
+        ImGui.TextColored(new Vector4(0.8f, 0.8f, 0.8f, 1.0f), "Settings");
+        ImGui.Separator();
+        ImGui.Spacing();
+        
+        _settings.DrawContent();
+    }
+
+    private void DrawVenueButtons()
+    {
+        if (_stateService.VenueState.id == string.Empty)
+            return;
+
+        if (ImGui.Button("Toggle Venue Window"))
+        {
+            _venueWindow.Toggle();
         }
 
-        if (_stateService.VenueState.id != string.Empty)
+        ImGui.SameLine();
+
+        if (ImGui.Button("Check Venue"))
         {
-            if (ImUtf8.Button($"Toggle {_stateService.VenueState.name} Window"))
-            {
-                _venueWindow.Toggle();
-            }
-            ImGui.SameLine();
-            if (ImUtf8.Button("Check Venue"))
-            {
-                _locationChanged.Invoke();
-            }
+            _locationChanged.Invoke();
         }
+    }
+
+    private void DrawTabs()
+    {
+        _tabs = [_characters, _houses, _venues, _settings];
 
         if (TabBar.Draw("##tabs", ImGuiTabBarFlags.None, ToLabel(_selectTab), out var currentTab, () => { }, _tabs))
-            _selectTab = TabType.None;
-        var tab = FromLabel(currentTab);
-
-        if (tab != SelectedTab)
         {
-            SelectedTab = FromLabel(currentTab);
+            _selectTab = TabType.None;
         }
     }
 
     private ReadOnlySpan<byte> ToLabel(TabType type)
-        => type switch {
+        => type switch
+        {
             TabType.Settings => _settings.Label,
             TabType.Characters => _characters.Label,
             TabType.Houses => _houses.Label,
             TabType.Venues => _venues.Label,
-            _ => ReadOnlySpan<byte>.Empty,
+            _ => ReadOnlySpan<byte>.Empty
         };
-
-    private TabType FromLabel(ReadOnlySpan<byte> label)
-    {
-        // @formatter:off
-        if (label == _settings.Label)   return TabType.Settings;
-        if (label == _characters.Label)   return TabType.Characters;
-        if (label == _houses.Label)   return TabType.Houses;
-        if (label == _venues.Label)   return TabType.Venues;
-        // @formatter:on
-        return TabType.None;
-    }
 
     private void OnTabSelected(TabType type)
     {

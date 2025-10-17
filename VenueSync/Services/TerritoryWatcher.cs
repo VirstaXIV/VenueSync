@@ -16,7 +16,7 @@ public class TerritoryWatcher: IDisposable
 {
     private readonly IFramework _framework;
     private readonly IClientState _clientState;
-    private readonly SocketService _socketService;
+    private readonly Configuration _configuration;
     private readonly StateService _stateService;
     private readonly LocationService _locationService;
     private readonly HouseVerifyWindow _houseVerifyWindow;
@@ -34,13 +34,13 @@ public class TerritoryWatcher: IDisposable
     private bool _running = false;
     private bool _justEntered = false;
     
-    public TerritoryWatcher(IFramework framework, IClientState clientState, SocketService socketService, StateService stateService, IObjectTable objectTable,
-        LocationService locationService, HouseVerifyWindow houseVerifyWindow, ChatService chatService,
+    public TerritoryWatcher(IFramework framework, IClientState clientState, StateService stateService, IObjectTable objectTable,
+        LocationService locationService, HouseVerifyWindow houseVerifyWindow, ChatService chatService, Configuration configuration,
         ServiceConnected @serviceConnected, VenueExited @venueExited, LocationChanged @locationChanged, DiceRoll @diceRoll)
     {
         _framework = framework;
         _clientState = clientState;
-        _socketService = socketService;
+        _configuration = configuration;
         _stateService = stateService;
         _locationService = locationService;
         _houseVerifyWindow = houseVerifyWindow;
@@ -192,17 +192,21 @@ public class TerritoryWatcher: IDisposable
                 var isSelf = _stateService.PlayerState.name == player.Name;
                 if (_stateService.VisitorsState.players.TryAdd(player.Name, player))
                 {
-                    // New entry
-                    _chatService.ChatPlayerLink(player, " has come inside.");
+                    if (_configuration is { NotifyEntrances: true, ClientMode: false })
+                    {
+                        _chatService.ChatPlayerLink(player, " has come inside.");
+                    }
                 }
                 else if (!_stateService.VisitorsState.players[player.Name].InHouse)
                 {
-                    // Returning Entry
                     _stateService.VisitorsState.players[player.Name].InHouse = true;
                     _stateService.VisitorsState.players[player.Name].LatestEntry = DateTime.Now;
                     _stateService.VisitorsState.players[player.Name].TimeCursor = DateTime.Now;
                     _stateService.VisitorsState.players[player.Name].EntryCount++;
-                    _chatService.ChatPlayerLink(player, " has come inside.");
+                    if (_configuration is { NotifyEntrances: true, ClientMode: false })
+                    {
+                        _chatService.ChatPlayerLink(player, " has come inside.");
+                    }
                 }
                 else if (_justEntered)
                 {
@@ -290,7 +294,7 @@ public class TerritoryWatcher: IDisposable
     {
         _ = Task.Run(async () =>
         {
-            if (_socketService.Connected)
+            if (_stateService.Connection.Connected)
             {
                 var reply = await _locationService.SendLocation(_stateService.CurrentHouse);
                 if (reply is { Success: false, Graceful: false })
@@ -301,7 +305,7 @@ public class TerritoryWatcher: IDisposable
         });
     }
 
-    private unsafe void CheckOwnedHouse()
+    private void CheckOwnedHouse()
     {
         var ownedHouse = HousingManager.GetOwnedHouseId(EstateType.PersonalEstate);
         if (_houseVerifyWindow._ownedHouseId != (long)ownedHouse.Id && ownedHouse is { IsApartment: false, IsWorkshop: false })

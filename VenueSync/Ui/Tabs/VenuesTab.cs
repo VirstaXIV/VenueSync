@@ -6,7 +6,7 @@ using OtterGui.Widgets;
 using VenueSync.Services;
 using VenueSync.State;
 
-namespace VenueSync.Ui.Tabs.VenuesTab;
+namespace VenueSync.Ui.Tabs;
 
 public class VenuesTab(StateService stateService): ITab
 {

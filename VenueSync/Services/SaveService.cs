@@ -7,15 +7,22 @@ namespace VenueSync.Services;
 
 public class FilenameManager
 {
+    private readonly StateService _stateService;
+    
     public readonly string ConfigDirectory;
     public readonly string ConfigFile;
-    public readonly string EphemeralConfigFile;
 
-    public FilenameManager(IDalamudPluginInterface pluginInterface)
+    public FilenameManager(IDalamudPluginInterface pluginInterface, StateService stateService)
     {
         ConfigDirectory = pluginInterface.ConfigDirectory.FullName;
         ConfigFile = pluginInterface.ConfigFile.FullName;
-        EphemeralConfigFile = Path.Combine(ConfigDirectory, "ephemeral_config.json");
+        
+        _stateService = stateService;
+    }
+
+    public string GetVenueConfigFile()
+    {
+        return Path.Combine(ConfigDirectory, $"venue-{_stateService.VenueState.id}.json");
     }
 }
 

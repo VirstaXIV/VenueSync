@@ -15,12 +15,18 @@ public class Configuration : IPluginConfiguration, ISavable
     
     public bool EnableDtrBar { get; set; } = true;
     public bool AutoConnect { get; set; } = true;
+    public bool NotifyEntrances { get; set; } = false;
+    public bool AutoloadMods { get; set; } = false;
     public string ServerToken { get; set; } = string.Empty;
     public string ServerUserID { get; set; } = string.Empty;
 
     public int Version { get; set; } = Constants.CurrentVersion;
     public string SyncFolder { get; set; } = string.Empty;
-    public List<string> ActiveMods { get; set; } = new();
+
+    // Storage management settings
+    public long MaxStorageSizeBytes { get; set; } = 10L * 1024 * 1024 * 1024; // 10 GB default
+    public int FileRetentionDays { get; set; } = 30; // Delete files not accessed in 30 days
+    public bool AutoCleanupEnabled { get; set; } = true;
 
     [JsonIgnore] private readonly SaveService _saveService;
 

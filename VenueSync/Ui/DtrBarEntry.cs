@@ -79,8 +79,8 @@ public class DtrBarEntry: IDisposable
                 if (_stateService.Connection is { Connecting: false, Disconnecting: false })
                 {
                     _ = _stateService.Connection.Connected ? 
-                            Task.Run(async () => await _socketService.Disconnect().ConfigureAwait(false)) : 
-                            Task.Run(async () => await _socketService.Connect().ConfigureAwait(false));
+                            Task.Run(async () => await _socketService.DisconnectAsync(true).ConfigureAwait(false)) : 
+                            Task.Run(async () => await _socketService.ConnectAsync().ConfigureAwait(false));
                 }
             }
         }
@@ -141,7 +141,7 @@ public class DtrBarEntry: IDisposable
 
     }
 
-    public void Update()
+    private void Update()
     {
         if (_configuration.EnableDtrBar && !_configuration.ServerToken.IsNullOrEmpty())
         {

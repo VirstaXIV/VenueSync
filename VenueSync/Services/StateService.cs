@@ -39,6 +39,15 @@ public class StateService: IDisposable
         return UserState.houses.Count > 0;
     }
 
+    public void ResetVenueState()
+    {
+        VenueState = new VenueState() {
+            location = new VenueLocation() {
+                mannequins = [],
+            }
+        };
+    }
+
     private void ResetState()
     {
         Connection = new Connection();
@@ -49,11 +58,7 @@ public class StateService: IDisposable
             houses = []
         };
         PlayerState = new PlayerState();
-        VenueState = new VenueState() {
-            location = new VenueLocation() {
-                mannequins = [],
-            }
-        };
+        ResetVenueState();
         CurrentHouse = new House();
         ActiveMannequin = new Mannequin();
         VisitorsState = new VisitorsState();

@@ -15,10 +15,7 @@ using VenueSync.Data;
 using VenueSync.Events;
 using VenueSync.Services.IPC;
 using VenueSync.Ui;
-using VenueSync.Ui.Tabs.CharactersTab;
-using VenueSync.Ui.Tabs.HousesTab;
-using VenueSync.Ui.Tabs.SettingsTab;
-using VenueSync.Ui.Tabs.VenuesTab;
+using VenueSync.Ui.Tabs;
 using VenueSync.Ui.Widgets;
 
 namespace VenueSync.Services;
@@ -73,6 +70,7 @@ public static class ServiceProvider
                    .AddSingleton<FrameworkManager>()
                    .AddSingleton<SaveService>()
                    .AddSingleton<Configuration>()
+                   .AddSingleton<VenueSettings>()
                    .AddSingleton<StateService>()
                    .AddSingleton<SyncFileService>()
                    .AddSingleton<PluginWatcherService>()
@@ -87,6 +85,7 @@ public static class ServiceProvider
     private static ServiceManager AddEvents(this ServiceManager services)
         => services.AddSingleton<TabSelected>()
                    .AddSingleton<ServiceConnected>()
+                   .AddSingleton<ServiceDisconnected>()
                    .AddSingleton<UpdateDtrBar>()
                    .AddSingleton<LoggedIn>()
                    .AddSingleton<LoggedOut>()

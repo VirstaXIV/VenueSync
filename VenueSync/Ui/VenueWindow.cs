@@ -5,6 +5,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using OtterGui.Services;
+using VenueSync.Data;
 using VenueSync.Events;
 using VenueSync.Services;
 using VenueSync.Ui.Widgets;
@@ -21,6 +22,7 @@ public class VenueWindowPosition : IService
 public class VenueWindow : Window, IDisposable
 {
     private readonly Configuration _configuration;
+    private readonly VenueSettings _venueSettings;
     private readonly StateService _stateService;
     private readonly SyncFileService _syncFileService;
     private readonly GuestListWidget _guestListWidget;
@@ -29,10 +31,12 @@ public class VenueWindow : Window, IDisposable
 
     private readonly ReloadMods _reloadMods;
     private readonly DisableMods _disableMods;
+    private readonly ServiceDisconnected _serviceDisconnected;
 
     public VenueWindow(
-        IDalamudPluginInterface pluginInterface, Configuration configuration, SyncFileService syncFileService, GuestListWidget guestListWidget, StaffListWidget staffListWidget,
-        StateService stateService, VenueWindowPosition position, ReloadMods @reloadMods, DisableMods @disableMods) : base("VenueSyncVenueWindow")
+        IDalamudPluginInterface pluginInterface, Configuration configuration, VenueSettings venueSettings, SyncFileService syncFileService, 
+        GuestListWidget guestListWidget, StaffListWidget staffListWidget,
+        StateService stateService, VenueWindowPosition position, ReloadMods @reloadMods, DisableMods @disableMods, ServiceDisconnected @serviceDisconnected) : base("VenueSyncVenueWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
         SizeConstraints = new WindowSizeConstraints() {
@@ -40,6 +44,7 @@ public class VenueWindow : Window, IDisposable
             MaximumSize = new Vector2(1000, 900),
         };
         _configuration = configuration;
+        _venueSettings = venueSettings;
         _stateService = stateService;
         _syncFileService = syncFileService;
         _guestListWidget = guestListWidget;
@@ -48,6 +53,17 @@ public class VenueWindow : Window, IDisposable
 
         _reloadMods = @reloadMods;
         _disableMods = @disableMods;
+        _serviceDisconnected = @serviceDisconnected;
+        
+        _serviceDisconnected.Subscribe(OnDisconnect, ServiceDisconnected.Priority.High);
+    }
+
+    private void OnDisconnect()
+    {
+        if (IsOpen)
+        {
+            Toggle();
+        }
     }
 
     public override void PreDraw()
@@ -192,22 +208,49 @@ public class VenueWindow : Window, IDisposable
                 {
                     ImGui.PushID(mod.id);
 
-                    bool isEnabled = _configuration.ActiveMods.Contains(mod.mannequin_id);
+                    bool isEnabled = _configuration.AutoloadMods 
+                                         ? !_venueSettings.InactiveMods.Contains(mod.mannequin_id) 
+                                         : _venueSettings.ActiveMods.Contains(mod.mannequin_id);
                     if (ImGui.Checkbox($"##modToggle{mod.id}", ref isEnabled))
                     {
-                        if (_configuration.ActiveMods.Contains(mod.mannequin_id) != isEnabled)
+                        if (_configuration.AutoloadMods)
                         {
                             if (isEnabled)
                             {
-                                _configuration.ActiveMods.Add(mod.mannequin_id);
+                                if (_venueSettings.InactiveMods.Contains(mod.mannequin_id))
+                                {
+                                    _venueSettings.InactiveMods.Remove(mod.mannequin_id);
+                                }
                             }
                             else
                             {
-                                _configuration.ActiveMods.Remove(mod.mannequin_id);
+                                if (!_venueSettings.InactiveMods.Contains(mod.mannequin_id))
+                                {
+                                    _venueSettings.InactiveMods.Add(mod.mannequin_id);
+                                }
                             }
 
-                            _reloadMods.Invoke();
                         }
+                        else
+                        {
+                            if (isEnabled)
+                            {
+                                if (!_venueSettings.ActiveMods.Contains(mod.mannequin_id))
+                                {
+                                    _venueSettings.ActiveMods.Add(mod.mannequin_id);
+                                }
+                            }
+                            else
+                            {
+                                if (_venueSettings.ActiveMods.Contains(mod.mannequin_id))
+                                {
+                                    _venueSettings.ActiveMods.Remove(mod.mannequin_id);
+                                }
+                            }
+
+                        }
+                        _venueSettings.Save();
+                        _reloadMods.Invoke();
                     }
 
                     ImGui.SameLine();
@@ -217,12 +260,6 @@ public class VenueWindow : Window, IDisposable
                     {
                         if (ImGui.IsItemHovered())
                             ImGui.SetTooltip(mod.description);
-                    }
-
-                    if (_configuration.ActiveMods.Contains(mod.mannequin_id))
-                    {
-                        ImGui.SameLine();
-                        ImGui.TextColored(VenueColors.ActiveIndicator, "✓");
                     }
 
                     ImGui.Spacing();
