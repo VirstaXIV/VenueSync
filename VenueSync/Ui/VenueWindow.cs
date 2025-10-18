@@ -224,53 +224,79 @@ public class VenueWindow : Window, IDisposable
 
     private void DrawModCheckbox(MannequinModItem mod)
     {
-        ImGui.PushID(mod.id);
+        var id = mod.id;
+        var isEnabledFromSettings = _configuration.AutoloadMods 
+            ? !_venueSettings.InactiveMods.Contains(id)
+            : _venueSettings.ActiveMods.Contains(id);
 
-        bool isEnabled = _configuration.AutoloadMods
-            ? !_venueSettings.InactiveMods.Contains(mod.mannequin_id)
-            : _venueSettings.ActiveMods.Contains(mod.mannequin_id);
+        var failed = _stateService.VenueState.failed_mods.Contains(id);
 
-        if (ImGui.Checkbox($"##modToggle{mod.id}", ref isEnabled))
+        var displayEnabled = isEnabledFromSettings && !failed;
+
+        if (ImGui.Checkbox($"##{id}", ref displayEnabled))
         {
-            UpdateModState(mod.mannequin_id, isEnabled);
+            var userEnabled = displayEnabled;
+
+            if (_configuration.AutoloadMods)
+            {
+                if (userEnabled)
+                    _venueSettings.InactiveMods.Remove(id);
+                else
+                    _venueSettings.InactiveMods.Add(id);
+            }
+            else
+            {
+                if (userEnabled)
+                    _venueSettings.ActiveMods.Add(id);
+                else
+                    _venueSettings.ActiveMods.Remove(id);
+            }
+
+            if (userEnabled && failed)
+            {
+                _stateService.VenueState.failed_mods.Remove(id);
+            }
+
             _venueSettings.Save();
             _reloadMods.Invoke();
         }
 
         ImGui.SameLine();
-        ImGui.TextWrapped(mod.name);
+        ImGui.Text(mod.name);
 
-        if (!string.IsNullOrEmpty(mod.description) && ImGui.IsItemHovered())
+        if (failed)
         {
-            ImGui.SetTooltip(mod.description);
+            ImGui.SameLine();
+            ImGui.TextColored(new Vector4(0.85f, 0.2f, 0.2f, 1f), " (Failed)");
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip("This mod failed to apply previously. Enable to retry.");
+            }
         }
-
-        ImGui.Spacing();
-        ImGui.PopID();
     }
 
-    private void UpdateModState(string mannequinId, bool isEnabled)
+    private void UpdateModState(string id, bool isEnabled)
     {
         if (_configuration.AutoloadMods)
         {
             if (isEnabled)
             {
-                _venueSettings.InactiveMods.Remove(mannequinId);
+                _venueSettings.InactiveMods.Remove(id);
             }
             else
             {
-                _venueSettings.InactiveMods.Add(mannequinId);
+                _venueSettings.InactiveMods.Add(id);
             }
         }
         else
         {
             if (isEnabled)
             {
-                _venueSettings.ActiveMods.Add(mannequinId);
+                _venueSettings.ActiveMods.Add(id);
             }
             else
             {
-                _venueSettings.ActiveMods.Remove(mannequinId);
+                _venueSettings.ActiveMods.Remove(id);
             }
         }
     }
@@ -554,6 +580,10 @@ public class VenueWindow : Window, IDisposable
         {
             var selectedStream = venue.streams[currentIndex];
             OnStreamSelected(selectedStream.name);
+        }
+        if (ImGui.Button("No Stream Active"))
+        {
+            OnStreamSelected(string.Empty);
         }
     }
 

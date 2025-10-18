@@ -41,7 +41,12 @@ public class VenueService : IDisposable
     private readonly DeleteTemporaryCollection _penumbraRemoveTemporaryCollection;
     private readonly RedrawObject _penumbraRedrawObject;
     
+    // Map a mannequinId -> collection Guid
     private Dictionary<string, Guid> _collectionIds = [];
+    private HashSet<string> _failedMods = [];
+    private Dictionary<string, int> _collectionNextSlot = [];
+    // Map: mannequinId -> (modId -> slot)
+    private Dictionary<string, Dictionary<string, int>> _collectionModSlots = [];
     private bool _hasQueuedReload;
     
     public VenueService(
@@ -123,6 +128,8 @@ public class VenueService : IDisposable
         {
             if (_penumbraIPC.IsAvailable && _gameStateService.IsCharacterSet)
             {
+                _failedMods.Clear();
+                _stateService.VenueState.failed_mods.Clear();
                 DisposeMannequins();
                 HandleMannequins();
             }
@@ -176,7 +183,11 @@ public class VenueService : IDisposable
                 .Where(m => m.mannequin_id.Equals(loadedMannequin.id))
                 .ToList();
             
-            SetupMod(loadedMannequin, mannequin, mods);
+            // Reset the slot counter for this mannequin's collection before adding mods
+            _collectionNextSlot[loadedMannequin.id] = 0;
+            _collectionModSlots[loadedMannequin.id] = new();
+
+            SetupMods(loadedMannequin, mannequin, mods);
         }
 
         Redraw();
@@ -186,24 +197,26 @@ public class VenueService : IDisposable
     {
         foreach (var (uid, _) in _collectionIds)
         {
-            RemoveMod(uid);
+            RemoveCollection(uid);
         }
         
         _collectionIds.Clear();
+        _collectionNextSlot.Clear();
+        _collectionModSlots.Clear();
         Redraw();
     }
 
-    private void LoadMod(string uid, ushort idx, Dictionary<string, string> fileList, string manipulationData)
+    private void LoadMod(string mannequinId, string modId, ushort idx, Dictionary<string, string> fileList, string manipulationData, string modLogName)
     {
         try
         {
-            var collName = "VenueSync_" + uid;
+            var collName = "VenueSync_" + mannequinId;
 
-            if (!_collectionIds.TryGetValue(uid, out var guid))
+            if (!_collectionIds.TryGetValue(mannequinId, out var guid))
             {
                 VenueSync.Log.Debug($"Creating Temp Collection: {collName}");
 
-                var penEc = _penumbraCreateNamedTemporaryCollection.Invoke(uid, collName, out guid);
+                var penEc = _penumbraCreateNamedTemporaryCollection.Invoke(mannequinId, collName, out guid);
 
                 if (penEc != PenumbraApiEc.Success)
                 {
@@ -212,65 +225,154 @@ public class VenueService : IDisposable
                 }
 
                 VenueSync.Log.Debug($"Created Temp Collection: {collName}");
+
+                // Assign the newly created collection to the mannequin index once
+                VenueSync.Log.Debug($"Assigning Temp Collection to index {idx}");
+                _penumbraAssignTemporaryCollection.Invoke(guid, idx, true);
+
+                _collectionIds[mannequinId] = guid;
             }
 
-            VenueSync.Log.Debug($"Assigning Temp Collection to index {idx}");
-
-            _penumbraAssignTemporaryCollection.Invoke(guid, idx, true);
-            _penumbraRemoveTemporaryMod.Invoke("VenueSync", guid, 0);
-            _penumbraAddTemporaryMod.Invoke("VenueSync", guid, fileList, manipulationData, 0);
-
-            VenueSync.Log.Debug($"Successfully loaded mod for {collName}");
-
-            _collectionIds[uid] = guid;
-        }
-        catch (Exception exception)
-        {
-            VenueSync.Log.Error($"Failed to load mod: {exception.Message}");
-        }
-    }
-
-    private void SetupMod(MannequinItem mannequin, KeyValuePair<ActorIdentifier, ActorData> mannequinActor, List<MannequinModItem> mods)
-    {
-        if (_configuration.AutoloadMods ? _venueSettings.InactiveMods.Contains(mannequin.id) : !_venueSettings.ActiveMods.Contains(mannequin.id))
-        {
-            return;
-        }
-        
-        try
-        {
-            var idx = mannequinActor.Value.Objects[0].Index.Index;
-            var uid = mannequin.id;
-
-            if (!_syncFileService.VerifyModFiles(mods))
+            if (_collectionIds.TryGetValue(mannequinId, out var collGuid))
             {
-                VenueSync.Log.Debug($"Mod files missing for {mannequin.name}, downloading...");
-                _syncFileService.DownloadModFiles(mods);
-                _hasQueuedReload = true;
-                return;
-            }
+                // Determine a stable slot for this mod in this mannequin's collection
+                if (!_collectionModSlots.TryGetValue(mannequinId, out var modSlots))
+                {
+                    modSlots = new Dictionary<string, int>();
+                    _collectionModSlots[mannequinId] = modSlots;
+                }
 
-            var manipulationData = _manipulationDataManager.BuildManipulationData(mannequinActor, mods);
-            
-            VenueSync.Log.Debug($"Setting up mod for {mannequin.name}");
-            
-            LoadMod(uid, idx, _syncFileService.BuildModFileList(manipulationData.Paths, mods), manipulationData.ManipulationString);
+                if (!modSlots.TryGetValue(modId, out var slot))
+                {
+                    slot = _collectionNextSlot.TryGetValue(mannequinId, out var next) ? next : 0;
+                    modSlots[modId] = slot;
+                    _collectionNextSlot[mannequinId] = slot + 1;
+                }
+
+                // Remove any previous instance for this mod (for that particular mod slot) before adding
+                _penumbraRemoveTemporaryMod.Invoke("VenueSync", collGuid, slot);
+
+                // Add this mod into the mannequin's collection at its slot
+                _penumbraAddTemporaryMod.Invoke("VenueSync", collGuid, fileList, manipulationData, slot);
+                VenueSync.Log.Debug($"Successfully loaded mod '{modLogName}' into collection {collName} at slot {slot}");
+            }
+            else
+            {
+                VenueSync.Log.Error($"Failed to find collection for mannequin {mannequinId} after creation.");
+            }
         }
         catch (Exception exception)
         {
-            VenueSync.Log.Error($"Failed to setup mod: {exception}");
+            VenueSync.Log.Error($"Failed to load mod '{modLogName}' for mannequin {mannequinId}: {exception.Message}");
         }
     }
 
-    private void RemoveMod(string uid)
+    private void SetupMods(MannequinItem mannequin, KeyValuePair<ActorIdentifier, ActorData> mannequinActor, List<MannequinModItem> mods)
     {
-        if (_collectionIds.TryGetValue(uid, out var guid))
+        if (mods.Count == 0) return;
+
+        var idx = mannequinActor.Value.Objects[0].Index.Index;
+
+        foreach (var mod in mods)
         {
-            _penumbraRemoveTemporaryMod.Invoke("VenueSync", guid, 0);
+            // Check if this specific mod is enabled
+            var isModEnabled = _configuration.AutoloadMods 
+                ? !_venueSettings.InactiveMods.Contains(mod.id)
+                : _venueSettings.ActiveMods.Contains(mod.id);
+
+            if (!isModEnabled)
+            {
+                VenueSync.Log.Debug($"Skipping mod {mod.name} - mod is disabled");
+                continue;
+            }
+
+            // Check if mod failed previously
+            if (_failedMods.Contains(mod.id))
+            {
+                VenueSync.Log.Debug($"Skipping failed mod {mod.name} until manual reload");
+                continue;
+            }
+
+            // Validate mod files exist
+            if (mod.file is "" or null || string.IsNullOrEmpty(mod.extension))
+            {
+                VenueSync.Log.Warning($"Mod validation failed for {mod.name}: missing file and/or extension, skipping until manual reload");
+                MarkModFailed(mod.id);
+                continue;
+            }
+
+            // Check if mod files are downloaded
+            if (!_syncFileService.VerifyModFiles([mod]))
+            {
+                VenueSync.Log.Debug($"Mod files missing for {mod.name}, downloading...");
+                
+                _syncFileService.DownloadModFiles([mod], (modId, success) =>
+                {
+                    if (!success)
+                    {
+                        VenueSync.Log.Warning($"Failed to download mod files for {mod.name}, skipping until manual reload");
+                        MarkModFailed(modId);
+                    }
+                    else
+                    {
+                        _hasQueuedReload = true;
+                    }
+                });
+                
+                continue;
+            }
+
+            // Setup and load the mod
+            try
+            {
+                var manipulationData = _manipulationDataManager.BuildManipulationData(mannequinActor, [mod]);
+                
+                VenueSync.Log.Debug($"Setting up mod {mod.name} for {mannequin.name}");
+                
+                var fileList = _syncFileService.BuildModFileList(manipulationData.Paths, [mod]);
+                LoadMod(mannequin.id, mod.id, idx, fileList, manipulationData.ManipulationString, mod.name);
+            }
+            catch (Exception exception)
+            {
+                VenueSync.Log.Error($"Failed to setup mod {mod.name}: {exception}");
+                MarkModFailed(mod.id);
+            }
+        }
+    }
+
+    private void RemoveCollection(string mannequinId)
+    {
+        if (_collectionIds.TryGetValue(mannequinId, out var guid))
+        {
+            // Removing the temporary collection clears all temporary mods for this mannequin
             _penumbraRemoveTemporaryCollection.Invoke(guid);
         }
+
+        _collectionNextSlot.Remove(mannequinId);
+        _collectionModSlots.Remove(mannequinId);
     }
     
+    private void MarkModFailed(string modId)
+    {
+        // Track failure locally and in shared state for UI
+        _failedMods.Add(modId);
+        _stateService.VenueState.failed_mods.Add(modId);
+
+        // Auto-disable the mod in settings
+        if (_configuration.AutoloadMods)
+        {
+            if (!_venueSettings.InactiveMods.Contains(modId))
+                _venueSettings.InactiveMods.Add(modId);
+        }
+        else
+        {
+            // In manual mode, enabled mods are listed in ActiveMods
+            _venueSettings.ActiveMods.Remove(modId);
+        }
+
+        _venueSettings.Save();
+    }
+
     private async Task LoadLogoTextureAsync(string imagePath)
     {
         try
@@ -301,7 +403,11 @@ public class VenueService : IDisposable
             data.venue.logo, 
             "png", 
             data.venue.hash, 
-            path => _ = Task.Run(async () => await LoadLogoTextureAsync(path))
+            path => _ = Task.Run(async () =>
+            {
+                if (path == null) return; 
+                await LoadLogoTextureAsync(path);
+            })
         );
         
         VenueSync.Messager.NotificationMessage($"Welcome to [{data.venue.name}]", NotificationType.Success);
@@ -323,7 +429,11 @@ public class VenueService : IDisposable
             data.venue.logo, 
             "png", 
             data.venue.hash, 
-            path => _ = Task.Run(async () => await LoadLogoTextureAsync(path))
+            path => _ = Task.Run(async () =>
+            {
+                if (path == null) return; 
+                await LoadLogoTextureAsync(path);
+            })
         );
         
         ReloadAllMods();

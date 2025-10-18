@@ -80,15 +80,15 @@ public class Configuration : IPluginConfiguration, ISavable
     {
         public const int CurrentVersion = 1;
         
-        public const string VenueSyncDashboard = "https://venuesync.test";
-        
 #if DEBUG
+        public const string VenueSyncDashboard = "https://venuesync.test";
         public const string API_ENDPOINT = "https://venuesync.test/api";
         public const string SOCKET_APP_KEY = "laravel-herd";
         public const string SOCKET_HOST = "localhost";
         public const int SOCKET_PORT = 8080;
         public const string SOCKET_SCHEME = "http";
 #else
+        public const string VenueSyncDashboard = "https://dev.xivvenuesync.com";
         public const string API_ENDPOINT = "https://dev.xivvenuesync.com/api";
         public const string SOCKET_APP_KEY = "omgsf8gip6kbwtb0oqju";
         public const string SOCKET_HOST = "ws.dev.xivvenuesync.com";

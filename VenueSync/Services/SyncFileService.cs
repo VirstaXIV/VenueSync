@@ -116,9 +116,6 @@ public class SyncFileService : IDisposable
     
     public bool VerifyModFiles(List<MannequinModItem> mods)
     {
-        if (_activeDownloads.Count > 0)
-            return false;
-
         foreach (var mod in mods)
         {
             if (!VerifyFile(mod.id, mod.extension, mod.hash))
@@ -153,7 +150,7 @@ public class SyncFileService : IDisposable
 
     #region File Download
     
-    public void MaybeDownloadFile(string id, string file, string extension, string hash, Action<string>? callback = null)
+    public void MaybeDownloadFile(string id, string file, string extension, string hash, Action<string?>? callback = null)
     {
         if (!_activeDownloads.ContainsKey(id))
         {
@@ -169,20 +166,52 @@ public class SyncFileService : IDisposable
         }
     }
     
-    public void DownloadModFiles(List<MannequinModItem> mods)
+    public void DownloadModFiles(List<MannequinModItem> mods, Action<string, bool>? onDownloadComplete = null)
     {
-        foreach (var mod in mods)
+        var pendingDownloads = new ConcurrentDictionary<string, bool>();
+        
+        foreach (var mod in mods.Where(mod => mod.file is not ("" or null)))
         {
-            MaybeDownloadFile(mod.id, mod.file, mod.extension, mod.hash);
-
-            foreach (var file in mod.files)
+            var modId = mod.id;
+            var fileCount = 1 + mod.files.Count(f => f.file is not ("" or null));
+            var completedFiles = 0;
+            var hasFailure = false;
+            
+            // Track this mod's downloads
+            pendingDownloads[modId] = true;
+            
+            VenueSync.Log.Debug($"Downloading {fileCount} files for mod: {mod.name}");
+            
+            void CheckModCompletion(bool success)
             {
-                MaybeDownloadFile(file.id, file.file, file.extension, file.hash);
+                if (!success)
+                    hasFailure = true;
+                
+                completedFiles++;
+                
+                if (completedFiles == fileCount)
+                {
+                    pendingDownloads.TryRemove(modId, out _);
+                    onDownloadComplete?.Invoke(modId, !hasFailure);
+                }
+            }
+            
+            MaybeDownloadFile(mod.id, mod.file, mod.extension, mod.hash, path =>
+            {
+                CheckModCompletion(path != null);
+            });
+
+            foreach (var file in mod.files.Where(file => file.file is not ("" or null)))
+            {
+                VenueSync.Log.Debug($"Downloading file: {file.file}");
+                MaybeDownloadFile(file.id, file.file, file.extension, file.hash, path =>
+                {
+                    CheckModCompletion(path != null);
+                });
             }
         }
     }
-    
-    private async Task DownloadFileAsync(string id, string file, string localPath, Action<string>? onComplete = null)
+    private async Task DownloadFileAsync(string id, string file, string localPath, Action<string?>? onComplete = null)
     {
         var progress = new DownloadProgress
         {
@@ -256,16 +285,20 @@ public class SyncFileService : IDisposable
                 _downloadedBytesAcrossAllFiles -= progress.DownloadedBytes;
             }
             DeleteFile(localPath);
+            
+            onComplete?.Invoke(null);
         }
         catch (Exception exception)
         {
-            VenueSync.Log.Error($"Failed to download {id}: {exception.Message}");
+            VenueSync.Log.Error($"Failed to download {file}: {exception.Message}");
             lock (_progressLock)
             {
                 _totalBytesAcrossAllFiles -= progress.TotalBytes;
                 _downloadedBytesAcrossAllFiles -= progress.DownloadedBytes;
             }
             DeleteFile(localPath);
+            
+            onComplete?.Invoke(null);
         }
         finally
         {

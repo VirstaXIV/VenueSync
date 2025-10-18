@@ -92,4 +92,5 @@ public record VenueState
     public required VenueLocation location { get; set; }
     public List<VenueStaff> staff { get; set; } = [];
     public List<VenueStream> streams { get; set; } = [];
+    public HashSet<string> failed_mods { get; set; } = [];
 }
