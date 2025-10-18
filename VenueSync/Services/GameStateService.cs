@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Hooking;
@@ -26,38 +24,43 @@ public class GameStateService: IDisposable
         
     private readonly IFramework _framework;
     private readonly IClientState _clientState;
+    private readonly ICondition _condition;
     private readonly StateService _stateService;
     private readonly TerritoryWatcher _territoryWatcher;
-    private readonly ICondition _condition;
-    private readonly IObjectTable _objectTable;
     
     private readonly LoggedIn _loggedIn;
     private readonly LoggedOut _loggedOut;
     private readonly DiceRoll _diceRoll;
     private readonly UpdateDtrBar _updateDtrBar;
     private readonly TerritoryChanged _territoryChanged;
-    
-    public bool IsAnythingDrawing { get; private set; } = false;
-    public bool IsInCutscene { get; private set; } = false;
-    public bool IsInGpose { get; private set; } = false;
+    public bool IsInCutscene { get; private set; }
+    public bool IsInGpose { get; private set; }
     public bool IsCharacterSet { get; private set; }
-    public bool IsInCombatOrPerforming { get; private set; } = false;
+    public bool IsInCombatOrPerforming { get; private set; }
     
-    public GameStateService(IFramework framework, IClientState clientState, ICondition condition, IObjectTable objectTable, IGameInteropProvider gameInteropProvider,
-        StateService stateService, TerritoryWatcher territoryWatcher,
-        LoggedIn @loggedIn, LoggedOut @loggedOut, DiceRoll @diceRoll, UpdateDtrBar @updateDtrBar, TerritoryChanged @territoryChanged)
+    public GameStateService(
+        IFramework framework, 
+        IClientState clientState, 
+        ICondition condition, 
+        IGameInteropProvider gameInteropProvider,
+        StateService stateService, 
+        TerritoryWatcher territoryWatcher,
+        LoggedIn loggedIn, 
+        LoggedOut loggedOut, 
+        DiceRoll diceRoll, 
+        UpdateDtrBar updateDtrBar, 
+        TerritoryChanged territoryChanged)
     {
         _framework = framework;
         _clientState = clientState;
         _condition = condition;
-        _objectTable = objectTable;
         _stateService = stateService;
         _territoryWatcher = territoryWatcher;
-        _loggedIn = @loggedIn;
-        _loggedOut = @loggedOut;
-        _diceRoll = @diceRoll;
-        _updateDtrBar = @updateDtrBar;
-        _territoryChanged = @territoryChanged;
+        _loggedIn = loggedIn;
+        _loggedOut = loggedOut;
+        _diceRoll = diceRoll;
+        _updateDtrBar = updateDtrBar;
+        _territoryChanged = territoryChanged;
         
         VenueSync.Log.Debug($"Starting Client State Service.");
         StartFramework();
@@ -100,72 +103,6 @@ public class GameStateService: IDisposable
         _loggedOut.Invoke();
     }
 
-    private void SetCurrentPlayer()
-    {
-        EnsureIsOnFramework();
-        var player = _clientState.LocalPlayer;
-        if (player == null)
-        {
-            return;
-        }
-
-        var name = player.Name.TextValue;
-        var world = player.HomeWorld.Value.Name.ToString().ToLower();
-        var worldId = player.HomeWorld.Value.RowId;
-        var dataCenter = (
-                             VenueSync.DataManager.GetExcelSheet<Lumina.Excel.Sheets.World>()?.GetRow(worldId).DataCenter.Value.Name.ToString() ?? ""
-                         ).ToLower();
-
-        if (_stateService.PlayerState.name == name && _stateService.PlayerState.world == world && _stateService.PlayerState.data_center == dataCenter)
-        {
-            return;
-        }
-
-        VenueSync.Log.Debug($"Setting current player to {name} - {world} [{dataCenter}]");
-        _stateService.PlayerState.name = name;
-        _stateService.PlayerState.world = world;
-        _stateService.PlayerState.data_center = dataCenter;
-        _stateService.PlayerState.world_id = worldId;
-    }
-
-    public void EnsureIsOnFramework()
-    {
-        if (!_framework.IsInFrameworkUpdateThread) throw new InvalidOperationException("Can only be run on Framework");
-    }
-    
-    public async Task RunOnFrameworkThread(Action act, [CallerMemberName] string callerMember = "", [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0)
-    {
-        var fileName = Path.GetFileNameWithoutExtension(callerFilePath);
-        if (!_framework.IsInFrameworkUpdateThread)
-        {
-            await _framework.RunOnFrameworkThread(act).ContinueWith((_) => Task.CompletedTask).ConfigureAwait(false);
-            while (_framework.IsInFrameworkUpdateThread) // yield the thread again, should technically never be triggered
-            {
-                await Task.Delay(1).ConfigureAwait(false);
-            }
-        }
-        else
-        {
-            act();
-        }
-    }
-
-    public async Task<T> RunOnFrameworkThread<T>(Func<T> func, [CallerMemberName] string callerMember = "", [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0)
-    {
-        var fileName = Path.GetFileNameWithoutExtension(callerFilePath);
-        if (!_framework.IsInFrameworkUpdateThread)
-        {
-            var result = await _framework.RunOnFrameworkThread(func).ContinueWith((task) => task.Result).ConfigureAwait(false);
-            while (_framework.IsInFrameworkUpdateThread) // yield the thread again, should technically never be triggered
-            {
-                await Task.Delay(1).ConfigureAwait(false);
-            }
-            return result;
-        }
-
-        return func.Invoke();
-    }
-
     private void OnTerritoryChanged(ushort territory)
     {
         _territoryChanged.Invoke();
@@ -182,49 +119,10 @@ public class GameStateService: IDisposable
             
             _updateDtrBar.Invoke();
             
-            if (_clientState.IsGPosing && !IsInGpose)
-            {
-                VenueSync.Log.Debug("Gpose start");
-                IsInGpose = true;
-            }
-            else if (!_clientState.IsGPosing && IsInGpose)
-            {
-                VenueSync.Log.Debug("Gpose end");
-                IsInGpose = false;
-            }
-            
-            if ((_condition[ConditionFlag.Performing] || _condition[ConditionFlag.InCombat]) && !IsInCombatOrPerforming)
-            {
-                VenueSync.Log.Debug("Combat/Performance start");
-                IsInCombatOrPerforming = true;
-            }
-            else if ((!_condition[ConditionFlag.Performing] && !_condition[ConditionFlag.InCombat]) && IsInCombatOrPerforming)
-            {
-                VenueSync.Log.Debug("Combat/Performance end");
-                IsInCombatOrPerforming = false;
-            }
-            
-            if (_condition[ConditionFlag.WatchingCutscene] && !IsInCutscene)
-            {
-                VenueSync.Log.Debug("Cutscene start");
-                IsInCutscene = true;
-            }
-            else if (!_condition[ConditionFlag.WatchingCutscene] && IsInCutscene)
-            {
-                VenueSync.Log.Debug("Cutscene end");
-                IsInCutscene = false;
-            }
-            
-            var localPlayer = _clientState.LocalPlayer;
-            if (localPlayer != null && !IsCharacterSet)
-            {
-                IsCharacterSet = true;
-                SetCurrentPlayer();
-            }
-            else if (localPlayer == null && IsCharacterSet)
-            {
-                IsCharacterSet = false;
-            }
+            UpdateGposeState();
+            UpdateCombatPerformingState();
+            UpdateCutsceneState();
+            UpdateCharacterState();
             
             _territoryWatcher.OnFrameworkUpdate();
         }
@@ -233,7 +131,141 @@ public class GameStateService: IDisposable
             VenueSync.Log.Error($"VenueSync Failed during framework update (service): {exception.Message}");
         }
     }
+
+    private void UpdateGposeState()
+    {
+        if (_clientState.IsGPosing && !IsInGpose)
+        {
+            VenueSync.Log.Debug("Gpose start");
+            IsInGpose = true;
+        }
+        else if (!_clientState.IsGPosing && IsInGpose)
+        {
+            VenueSync.Log.Debug("Gpose end");
+            IsInGpose = false;
+        }
+    }
+
+    private void UpdateCombatPerformingState()
+    {
+        var isInCombatOrPerforming = _condition[ConditionFlag.Performing] || _condition[ConditionFlag.InCombat];
+        
+        if (isInCombatOrPerforming && !IsInCombatOrPerforming)
+        {
+            VenueSync.Log.Debug("Combat/Performance start");
+            IsInCombatOrPerforming = true;
+        }
+        else if (!isInCombatOrPerforming && IsInCombatOrPerforming)
+        {
+            VenueSync.Log.Debug("Combat/Performance end");
+            IsInCombatOrPerforming = false;
+        }
+    }
+
+    private void UpdateCutsceneState()
+    {
+        if (_condition[ConditionFlag.WatchingCutscene] && !IsInCutscene)
+        {
+            VenueSync.Log.Debug("Cutscene start");
+            IsInCutscene = true;
+        }
+        else if (!_condition[ConditionFlag.WatchingCutscene] && IsInCutscene)
+        {
+            VenueSync.Log.Debug("Cutscene end");
+            IsInCutscene = false;
+        }
+    }
+
+    private void UpdateCharacterState()
+    {
+        var localPlayer = _clientState.LocalPlayer;
+        
+        if (localPlayer != null && !IsCharacterSet)
+        {
+            IsCharacterSet = true;
+            SetCurrentPlayer();
+        }
+        else if (localPlayer == null && IsCharacterSet)
+        {
+            IsCharacterSet = false;
+        }
+    }
+
+    private void SetCurrentPlayer()
+    {
+        EnsureIsOnFramework();
+        
+        var player = _clientState.LocalPlayer;
+        if (player == null)
+        {
+            return;
+        }
+
+        var name = player.Name.TextValue;
+        var world = player.HomeWorld.Value.Name.ToString().ToLower();
+        var worldId = player.HomeWorld.Value.RowId;
+        var dataCenter = (
+            VenueSync.DataManager.GetExcelSheet<Lumina.Excel.Sheets.World>()?.GetRow(worldId).DataCenter.Value.Name.ToString() ?? ""
+        ).ToLower();
+
+        if (_stateService.PlayerState.name == name && 
+            _stateService.PlayerState.world == world && 
+            _stateService.PlayerState.data_center == dataCenter)
+        {
+            return;
+        }
+
+        VenueSync.Log.Debug($"Setting current player to {name} - {world} [{dataCenter}]");
+        _stateService.PlayerState.name = name;
+        _stateService.PlayerState.world = world;
+        _stateService.PlayerState.data_center = dataCenter;
+        _stateService.PlayerState.world_id = worldId;
+    }
+
+    public void EnsureIsOnFramework()
+    {
+        if (!_framework.IsInFrameworkUpdateThread)
+        {
+            throw new InvalidOperationException("Can only be run on Framework");
+        }
+    }
     
+    public async Task RunOnFrameworkThread(Action act)
+    {
+        if (!_framework.IsInFrameworkUpdateThread)
+        {
+            await _framework.RunOnFrameworkThread(act).ContinueWith((_) => Task.CompletedTask).ConfigureAwait(false);
+            
+            // Yield the thread again, should technically never be triggered
+            while (_framework.IsInFrameworkUpdateThread)
+            {
+                await Task.Delay(1).ConfigureAwait(false);
+            }
+        }
+        else
+        {
+            act();
+        }
+    }
+
+    public async Task<T> RunOnFrameworkThread<T>(Func<T> func)
+    {
+        if (!_framework.IsInFrameworkUpdateThread)
+        {
+            var result = await _framework.RunOnFrameworkThread(func).ContinueWith((task) => task.Result).ConfigureAwait(false);
+            
+            // Yield the thread again, should technically never be triggered
+            while (_framework.IsInFrameworkUpdateThread)
+            {
+                await Task.Delay(1).ConfigureAwait(false);
+            }
+            
+            return result;
+        }
+
+        return func.Invoke();
+    }
+
     public void Dispose()
     {
         RandomPrintLogHook?.Dispose();
