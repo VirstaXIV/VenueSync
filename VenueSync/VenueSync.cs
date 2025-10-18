@@ -35,22 +35,23 @@ public sealed class VenueSync : IDalamudPlugin
             _services.EnsureRequiredServices();
 
             Log.Debug("VenueSync Initialized");
-            _services.GetService<GameStateService>();
-            Log.Debug("Loading Windows");
-            _services.GetService<VenueSyncWindowSystem>();
-            _services.GetService<DtrBarEntry>();
-            Log.Debug("Loading Commands");
-            _services.GetService<CommandService>();
             Log.Debug("Loading Territory Watcher");
             _services.GetService<TerritoryWatcher>();
             Log.Debug("Loading Sockets");
             _services.GetService<SocketService>();
-            Log.Information($"VenueSync v{Version} loaded successfully.");
 
             try
             {
                 Log.Debug("Loading Venue Service");
                 _services.GetService<VenueService>();
+                _services.GetService<GameStateService>();
+                Log.Debug("Loading Windows");
+                _services.GetService<VenueSyncWindowSystem>();
+                _services.GetService<DtrBarEntry>();
+                Log.Debug("Loading Commands");
+                _services.GetService<CommandService>();
+                
+                Log.Information($"VenueSync v{Version} loaded successfully.");
             }
             catch (Exception exception)
             {

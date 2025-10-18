@@ -173,10 +173,13 @@ public class SettingsTab(Configuration configuration, StateService stateService,
             configuration.AutoConnect, v => configuration.AutoConnect = v);
         
         ImGui.Separator();
-        
-        DrawConnectionControls();
-        
-        ImGui.Separator();
+
+        if (stateService.Connection.IsLoggedIn)
+        {
+            DrawConnectionControls();
+            
+            ImGui.Separator();
+        }
         
         ImGui.TextWrapped("Removing your token will require re-authentication. This can help resolve connection issues.");
         ImGui.Spacing();

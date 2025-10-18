@@ -52,7 +52,6 @@ class VenueSyncHttpAuthenticator : HttpAuthorizer
 
 public class SocketService: IDisposable
 {
-    private readonly GameStateService _gameStateService;
     private readonly Configuration _configuration;
     private readonly StateService _stateService;
     private readonly AccountService _accountService;
@@ -76,8 +75,7 @@ public class SocketService: IDisposable
     private CancellationTokenSource? _reconnectCts;
 
     public SocketService(
-        Configuration configuration, 
-        GameStateService gameStateService,
+        Configuration configuration,
         StateService stateService, 
         AccountService accountService,
         ServiceConnected serviceConnected, 
@@ -88,7 +86,6 @@ public class SocketService: IDisposable
         VenueUpdated venueUpdated, 
         VenueExited venueExited)
     {
-        _gameStateService = gameStateService;
         _configuration = configuration;
         _stateService = stateService;
         _accountService = accountService;
@@ -114,19 +111,13 @@ public class SocketService: IDisposable
         VenueSync.Log.Debug("Running auto connect on login");
         _shouldAutoConnect = false;
         
-        _ = Task.Run(async () =>
-        {
-            await _gameStateService.RunOnFrameworkThread(() =>
-            {
-                _ = Task.Run(async () => await ConnectAsync().ConfigureAwait(false));
-            }).ConfigureAwait(false);
-        });
+        _ = Task.Run(async () => await ConnectAsync().ConfigureAwait(false));
     }
 
     private void OnLoggedOut()
     {
         VenueSync.Log.Debug("Logging out, disconnecting from service");
-        _ = Task.Run(async () => await DisconnectAsync().ConfigureAwait(false));
+        _ = Task.Run(async () => await DisconnectAsync(true).ConfigureAwait(false));
     }
 
     private void OnVenueExited(string id)
@@ -194,18 +185,27 @@ public class SocketService: IDisposable
         await _channelLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            // Check if channel already exists
             if (_channels.ContainsKey(channelName))
             {
-                VenueSync.Log.Debug($"Channel {channelName} already subscribed");
+                VenueSync.Log.Debug($"Channel {channelName} already subscribed - skipping");
                 return;
             }
 
+            VenueSync.Log.Debug($"Subscribing to channel: {channelName}");
             var channel = await pusher.SubscribeAsync(channelName).ConfigureAwait(false);
-            channel.BindAll(OnEventReceived);
+            
+            if (channelName.StartsWith("private-user."))
+            {
+                BindUserChannelEvents(channel);
+            }
+            else if (channelName.StartsWith("venue."))
+            {
+                BindVenueChannelEvents(channel);
+            }
+            
             _channels[channelName] = channel;
         
-            VenueSync.Log.Debug($"Subscribed to channel: {channelName}");
+            VenueSync.Log.Debug($"Successfully subscribed to channel: {channelName}");
         }
         catch (Exception ex)
         {
@@ -214,6 +214,61 @@ public class SocketService: IDisposable
         finally
         {
             _channelLock.Release();
+        }
+    }
+
+    private void BindUserChannelEvents(Channel channel)
+    {
+        VenueSync.Log.Debug($"Binding user channel events to {channel.Name}");
+        
+        channel.Unbind("venue.entered", OnVenueEnteredEvent);
+        channel.Bind("venue.entered", OnVenueEnteredEvent);
+    }
+
+    private void BindVenueChannelEvents(Channel channel)
+    {
+        VenueSync.Log.Debug($"Binding venue channel events to {channel.Name}");
+        
+        channel.Unbind("venue.updated", OnVenueUpdatedEvent);
+        channel.Bind("venue.updated", OnVenueUpdatedEvent);
+    }
+
+    private void OnVenueEnteredEvent(PusherEvent eventData)
+    {
+        VenueSync.Log.Debug($"Received event: venue.entered (Channel: {eventData.ChannelName})");
+
+        try
+        {
+            var enteredData = JsonConvert.DeserializeObject<VenueEnteredData>(eventData.Data);
+            if (enteredData != null)
+            {
+                VenueSync.Log.Debug($"Processing venue.entered for venue ID: {enteredData.venue.id}");
+                _venueEntered.Invoke(enteredData);
+                _ = Task.Run(async () => 
+                    await AddChannelAsync($"venue.{enteredData.venue.id}").ConfigureAwait(false));
+            }
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Error($"Error processing venue.entered event: {ex.Message}");
+        }
+    }
+
+    private void OnVenueUpdatedEvent(PusherEvent eventData)
+    {
+        VenueSync.Log.Debug($"Received event: venue.updated (Channel: {eventData.ChannelName})");
+
+        try
+        {
+            var updatedData = JsonConvert.DeserializeObject<VenueUpdatedData>(eventData.Data);
+            if (updatedData != null)
+            {
+                _venueUpdated.Invoke(updatedData);
+            }
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Error($"Error processing venue.updated event: {ex.Message}");
         }
     }
     
@@ -274,39 +329,6 @@ public class SocketService: IDisposable
         }
     }
     
-    private void OnEventReceived(string eventName, PusherEvent eventData)
-    {
-        VenueSync.Log.Debug($"Received event: {eventName}");
-
-        try
-        {
-            switch (eventName)
-            {
-                case "venue.entered":
-                    var enteredData = JsonConvert.DeserializeObject<VenueEnteredData>(eventData.Data);
-                    if (enteredData != null)
-                    {
-                        _venueEntered.Invoke(enteredData);
-                        _ = Task.Run(async () => 
-                                         await AddChannelAsync($"venue.{enteredData.venue.id}").ConfigureAwait(false));
-                    }
-                    break;
-
-                case "venue.updated":
-                    var updatedData = JsonConvert.DeserializeObject<VenueUpdatedData>(eventData.Data);
-                    if (updatedData != null)
-                    {
-                        _venueUpdated.Invoke(updatedData);
-                    }
-                    break;
-            }
-        }
-        catch (Exception ex)
-        {
-            VenueSync.Log.Error($"Error processing event {eventName}: {ex.Message}");
-        }
-    }
-    
     public async Task ConnectAsync()
     {
         if (_isDisposed)
@@ -321,6 +343,12 @@ public class SocketService: IDisposable
             if (_stateService.Connection.Connected)
             {
                 VenueSync.Log.Debug("Already connected");
+                return;
+            }
+
+            if (!_stateService.Connection.IsLoggedIn)
+            {
+                VenueSync.Log.Debug("Must be logged in to connect");
                 return;
             }
 

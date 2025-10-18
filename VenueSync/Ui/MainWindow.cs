@@ -35,7 +35,7 @@ public class MainWindow : Window, IDisposable
     private readonly StateService _stateService;
     private readonly VenueWindow _venueWindow;
     private readonly TabSelected _event;
-    private readonly LocationChanged _locationChanged;
+    private readonly TerritoryChanged _territoryChanged;
     private readonly MainWindowPosition _position;
 
     private readonly SettingsTab _settings;
@@ -57,7 +57,7 @@ public class MainWindow : Window, IDisposable
         CharactersTab charactersTab,
         HousesTab housesTab,
         TabSelected @event,
-        LocationChanged locationChanged,
+        TerritoryChanged territoryChanged,
         MainWindowPosition position) : base("VenueSyncMainWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
@@ -72,7 +72,7 @@ public class MainWindow : Window, IDisposable
         _stateService = stateService;
         _venueWindow = venueWindow;
         _event = @event;
-        _locationChanged = locationChanged;
+        _territoryChanged = territoryChanged;
         _position = position;
 
         _settings = settings;
@@ -151,7 +151,7 @@ public class MainWindow : Window, IDisposable
 
         if (ImGui.Button("Check Venue"))
         {
-            _locationChanged.Invoke();
+            _territoryChanged.Invoke();
         }
     }
 

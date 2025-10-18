@@ -5,4 +5,5 @@ public record PlayerState
     public string name { get; set; } = "";
     public string world { get; set; } = "";
     public string data_center { get; set; } = "";
+    public uint world_id { get; set; } = 0;
 }

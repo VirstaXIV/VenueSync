@@ -11,7 +11,6 @@ using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Component.Text;
 using FFXIVClientStructs.STD;
 using VenueSync.Events;
-using VenueSync.Ui;
 
 namespace VenueSync.Services;
 
@@ -28,42 +27,43 @@ public class GameStateService: IDisposable
     private readonly IFramework _framework;
     private readonly IClientState _clientState;
     private readonly StateService _stateService;
+    private readonly TerritoryWatcher _territoryWatcher;
     private readonly ICondition _condition;
     private readonly IObjectTable _objectTable;
-    private readonly IGameInteropProvider _gameInteropProvider;
     
-    private readonly LoggedIn _loggedInEvent;
-    private readonly LoggedOut _loggedOutEvent;
+    private readonly LoggedIn _loggedIn;
+    private readonly LoggedOut _loggedOut;
     private readonly DiceRoll _diceRoll;
     private readonly UpdateDtrBar _updateDtrBar;
+    private readonly TerritoryChanged _territoryChanged;
     
     public bool IsAnythingDrawing { get; private set; } = false;
     public bool IsInCutscene { get; private set; } = false;
     public bool IsInGpose { get; private set; } = false;
-    public bool IsLoggedIn { get; private set; }
+    public bool IsCharacterSet { get; private set; }
     public bool IsInCombatOrPerforming { get; private set; } = false;
     
     public GameStateService(IFramework framework, IClientState clientState, ICondition condition, IObjectTable objectTable, IGameInteropProvider gameInteropProvider,
-        StateService stateService,
-        LoggedIn @loggedIn, LoggedOut @loggedOut, DiceRoll @diceRoll, UpdateDtrBar @updateDtrBar)
+        StateService stateService, TerritoryWatcher territoryWatcher,
+        LoggedIn @loggedIn, LoggedOut @loggedOut, DiceRoll @diceRoll, UpdateDtrBar @updateDtrBar, TerritoryChanged @territoryChanged)
     {
         _framework = framework;
         _clientState = clientState;
-        _stateService = stateService;
         _condition = condition;
         _objectTable = objectTable;
-        _gameInteropProvider = gameInteropProvider;
-        
-        _loggedInEvent = @loggedIn;
-        _loggedOutEvent = @loggedOut;
+        _stateService = stateService;
+        _territoryWatcher = territoryWatcher;
+        _loggedIn = @loggedIn;
+        _loggedOut = @loggedOut;
         _diceRoll = @diceRoll;
         _updateDtrBar = @updateDtrBar;
+        _territoryChanged = @territoryChanged;
         
         VenueSync.Log.Debug($"Starting Client State Service.");
         StartFramework();
         StartLoginState();
         
-        _gameInteropProvider.InitializeFromAttributes(this);
+        gameInteropProvider.InitializeFromAttributes(this);
         
         RandomPrintLogHook?.Enable();
         DicePrintLogHook?.Enable();
@@ -72,31 +72,37 @@ public class GameStateService: IDisposable
     private void StartFramework()
     {
         _framework.Update += OnFrameworkUpdate;
+        _clientState.TerritoryChanged += OnTerritoryChanged;
+        _territoryChanged.Invoke();
     }
 
     private void StartLoginState()
     {
         _clientState.Login += OnLogin;
         _clientState.Logout += OnLogout;
+        if (_clientState.IsLoggedIn)
+        {
+            OnLogin();
+        }
     }
 
     private void OnLogin()
     {
         VenueSync.Log.Debug("Client Login.");
-        _loggedInEvent.Invoke();
+        _stateService.Connection.IsLoggedIn = true;
+        _loggedIn.Invoke();
     }
 
     private void OnLogout(int type, int code)
     {
         VenueSync.Log.Debug("Client Logout.");
-        _loggedOutEvent.Invoke();
+        _stateService.Connection.IsLoggedIn = false;
+        _loggedOut.Invoke();
     }
 
     private void SetCurrentPlayer()
     {
-        VenueSync.Log.Debug("Setting current player");
         EnsureIsOnFramework();
-        
         var player = _clientState.LocalPlayer;
         if (player == null)
         {
@@ -119,6 +125,7 @@ public class GameStateService: IDisposable
         _stateService.PlayerState.name = name;
         _stateService.PlayerState.world = world;
         _stateService.PlayerState.data_center = dataCenter;
+        _stateService.PlayerState.world_id = worldId;
     }
 
     public void EnsureIsOnFramework()
@@ -157,6 +164,11 @@ public class GameStateService: IDisposable
         }
 
         return func.Invoke();
+    }
+
+    private void OnTerritoryChanged(ushort territory)
+    {
+        _territoryChanged.Invoke();
     }
 
     private void OnFrameworkUpdate(IFramework framework)
@@ -204,19 +216,17 @@ public class GameStateService: IDisposable
             }
             
             var localPlayer = _clientState.LocalPlayer;
-            if (localPlayer != null && !IsLoggedIn)
+            if (localPlayer != null && !IsCharacterSet)
             {
-                // This will trigger on changing zones too.
-                VenueSync.Log.Debug("Logged in");
-                IsLoggedIn = true;
+                IsCharacterSet = true;
                 SetCurrentPlayer();
             }
-            else if (localPlayer == null && IsLoggedIn)
+            else if (localPlayer == null && IsCharacterSet)
             {
-                // This will trigger on changing zones too.
-                VenueSync.Log.Debug("Logged out");
-                IsLoggedIn = false;
+                IsCharacterSet = false;
             }
+            
+            _territoryWatcher.OnFrameworkUpdate();
         }
         catch (Exception exception)
         {
@@ -229,6 +239,7 @@ public class GameStateService: IDisposable
         RandomPrintLogHook?.Dispose();
         DicePrintLogHook?.Dispose();
         _framework.Update -= OnFrameworkUpdate;
+        _clientState.TerritoryChanged -= OnTerritoryChanged;
         _clientState.Login -= OnLogin;
         _clientState.Logout -= OnLogout;
     }

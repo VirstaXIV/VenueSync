@@ -12,13 +12,11 @@ public class CommandService: IDisposable, IApiService
     
     private readonly ICommandManager _commands;
     private readonly MainWindow _mainWindow;
-    private readonly Configuration _configuration;
 
-    public CommandService(ICommandManager commands, MainWindow mainWindow, Configuration configuration)
+    public CommandService(ICommandManager commands, MainWindow mainWindow)
     {
         _commands = commands;
         _mainWindow = mainWindow;
-        _configuration = configuration;
         
         _commands.AddHandler(MainCommandString, new CommandInfo(OnVenueSync) { HelpMessage = "Open or close the VenueSync window." });
     }

@@ -91,7 +91,7 @@ public static class ServiceProvider
                    .AddSingleton<LoggedOut>()
                    .AddSingleton<ReloadMods>()
                    .AddSingleton<DisableMods>()
-                   .AddSingleton<LocationChanged>()
+                   .AddSingleton<TerritoryChanged>()
                    .AddSingleton<DiceRoll>()
                    .AddSingleton<VenueEntered>()
                    .AddSingleton<VenueUpdated>()

@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Interface.ImGuiNotification;
-using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using OtterGui.Classes;
@@ -36,15 +34,6 @@ public class VenueService : IDisposable
     private readonly PenumbraIPC _penumbraIPC;
     private readonly ManipulationDataManager _manipulationDataManager;
     
-    private readonly VenueEntered _venueEntered;
-    private readonly VenueUpdated _venueUpdated;
-    private readonly VenueExited _venueExited;
-    private readonly LoggedIn _loggedIn;
-    private readonly LoggedOut _loggedOut;
-    private readonly ReloadMods _reloadMods;
-    private readonly DisableMods _disableMods;
-    private readonly ServiceDisconnected _serviceDisconnected;
-    
     private readonly AddTemporaryMod _penumbraAddTemporaryMod;
     private readonly RemoveTemporaryMod _penumbraRemoveTemporaryMod;
     private readonly CreateTemporaryCollection _penumbraCreateNamedTemporaryCollection;
@@ -52,7 +41,8 @@ public class VenueService : IDisposable
     private readonly DeleteTemporaryCollection _penumbraRemoveTemporaryCollection;
     private readonly RedrawObject _penumbraRedrawObject;
     
-    private Dictionary<string, Guid> _collectionIds;
+    private Dictionary<string, Guid> _collectionIds = [];
+    private bool _hasQueuedReload;
     
     public VenueService(
         IDalamudPluginInterface pluginInterface,
@@ -69,7 +59,6 @@ public class VenueService : IDisposable
         VenueEntered venueEntered,
         VenueUpdated venueUpdated,
         VenueExited venueExited,
-        LoggedIn loggedIn,
         LoggedOut loggedOut,
         ReloadMods reloadMods,
         DisableMods disableMods,
@@ -77,24 +66,14 @@ public class VenueService : IDisposable
     {
         _configuration = configuration;
         _venueSettings = venueSettings;
-        _gameStateService = gameStateService;
         _objects = objects;
         _textureProvider = textureProvider;
+        _gameStateService = gameStateService;
         _stateService = stateService;
         _syncFileService = syncFileService;
         _windowSystem = windowSystem;
         _penumbraIPC = penumbraIPC;
         _manipulationDataManager = manipulationDataManager;
-        _venueEntered = venueEntered;
-        _venueUpdated = venueUpdated;
-        _venueExited = venueExited;
-        _loggedIn = loggedIn;
-        _loggedOut = loggedOut;
-        _reloadMods = reloadMods;
-        _disableMods = disableMods;
-        _serviceDisconnected = serviceDisconnected;
-
-        _collectionIds = [];
         
         VenueSync.Log.Debug("Starting Venue Service");
         
@@ -105,20 +84,44 @@ public class VenueService : IDisposable
         _penumbraRemoveTemporaryCollection = new DeleteTemporaryCollection(pluginInterface);
         _penumbraRedrawObject = new RedrawObject(pluginInterface);
         
-        _venueEntered.Subscribe(OnVenueEntered, VenueEntered.Priority.High);
-        _venueUpdated.Subscribe(OnVenueUpdated, VenueUpdated.Priority.High);
-        _venueExited.Subscribe(OnVenueExited, VenueExited.Priority.High);
-        _loggedOut.Subscribe(DisposeMods, LoggedOut.Priority.High);
-        _reloadMods.Subscribe(ReloadAllMods, ReloadMods.Priority.High);
-        _disableMods.Subscribe(DisposeMods, DisableMods.Priority.High);
-        _serviceDisconnected.Subscribe(OnServiceDisconnected, ServiceDisconnected.Priority.High);
+        venueEntered.Subscribe(OnVenueEntered, VenueEntered.Priority.High);
+        venueUpdated.Subscribe(OnVenueUpdated, VenueUpdated.Priority.High);
+        venueExited.Subscribe(OnVenueExited, VenueExited.Priority.High);
+        loggedOut.Subscribe(DisposeMods, LoggedOut.Priority.High);
+        reloadMods.Subscribe(ReloadAllMods, ReloadMods.Priority.High);
+        disableMods.Subscribe(DisposeMods, DisableMods.Priority.High);
+        serviceDisconnected.Subscribe(OnServiceDisconnected, ServiceDisconnected.Priority.High);
+        
+        // Monitor download completion to trigger reload
+        Task.Run(MonitorDownloadsAsync);
     }
 
-    public void ReloadAllMods()
+    public void Dispose()
+    {
+        _stateService.VenueState.logoTexture?.Dispose();
+        DisposeMannequins();
+    }
+
+    private async Task MonitorDownloadsAsync()
+    {
+        while (true)
+        {
+            await Task.Delay(1000);
+            
+            if (_hasQueuedReload && !_syncFileService.IsDownloading)
+            {
+                _hasQueuedReload = false;
+                VenueSync.Log.Debug("Downloads completed, reloading mods");
+                ReloadAllMods();
+            }
+        }
+    }
+
+    private void ReloadAllMods()
     {
         _gameStateService.RunOnFrameworkThread(() =>
         {
-            if (_penumbraIPC.IsAvailable && _gameStateService.IsLoggedIn)
+            if (_penumbraIPC.IsAvailable && _gameStateService.IsCharacterSet)
             {
                 DisposeMannequins();
                 HandleMannequins();
@@ -126,7 +129,7 @@ public class VenueService : IDisposable
         }).ConfigureAwait(false);
     }
     
-    public void DisposeMods()
+    private void DisposeMods()
     {
         _gameStateService.RunOnFrameworkThread(() =>
         {
@@ -135,19 +138,6 @@ public class VenueService : IDisposable
                 DisposeMannequins();
             }
         }).ConfigureAwait(false);
-    }
-
-    public void Dispose()
-    {
-        _stateService.VenueState.logoTexture?.Dispose();
-        DisposeMannequins();
-        _venueEntered.Unsubscribe(OnVenueEntered);
-        _venueUpdated.Unsubscribe(OnVenueUpdated);
-        _venueExited.Unsubscribe(OnVenueExited);
-        _loggedOut.Unsubscribe(DisposeMods);
-        _reloadMods.Unsubscribe(ReloadAllMods);
-        _disableMods.Unsubscribe(DisposeMods);
-        _serviceDisconnected.Unsubscribe(OnServiceDisconnected);
     }
 
     private void Redraw()
@@ -182,7 +172,7 @@ public class VenueService : IDisposable
                 continue;
             }
             
-            List<MannequinModItem> mods = _stateService.VenueState.location.mods
+            var mods = _stateService.VenueState.location.mods
                 .Where(m => m.mannequin_id.Equals(loadedMannequin.id))
                 .ToList();
             
@@ -194,12 +184,12 @@ public class VenueService : IDisposable
     
     private void DisposeMannequins()
     {
-        foreach (var idSet in _collectionIds)
+        foreach (var (uid, _) in _collectionIds)
         {
-            RemoveMod(idSet.Key);
+            RemoveMod(uid);
         }
         
-        _collectionIds = [];
+        _collectionIds.Clear();
         Redraw();
     }
 
@@ -209,48 +199,34 @@ public class VenueService : IDisposable
         {
             var collName = "VenueSync_" + uid;
 
-            Guid guid;
-            if (_collectionIds.TryGetValue(uid, out var id))
-            {
-                guid = id;
-            }
-            else
+            if (!_collectionIds.TryGetValue(uid, out var guid))
             {
                 VenueSync.Log.Debug($"Creating Temp Collection: {collName}");
 
-                PenumbraApiEc penEc = _penumbraCreateNamedTemporaryCollection.Invoke(uid, collName, out guid);
+                var penEc = _penumbraCreateNamedTemporaryCollection.Invoke(uid, collName, out guid);
 
                 if (penEc != PenumbraApiEc.Success)
                 {
-                    VenueSync.Log.Error($"Failed to create temporary collection for {collName} with error code {penEc}. Please include this line in any error reports");
+                    VenueSync.Log.Error($"Failed to create temporary collection for {collName} with error code {penEc}");
                     return;
                 }
 
                 VenueSync.Log.Debug($"Created Temp Collection: {collName}");
             }
 
-            VenueSync.Log.Debug($"Assigning Temp Collection: {idx}");
-            VenueSync.Log.Debug($"Creating Temp Mod");
+            VenueSync.Log.Debug($"Assigning Temp Collection to index {idx}");
 
-            try
-            {
-                _penumbraAssignTemporaryCollection.Invoke(guid, idx, true);
-                _penumbraRemoveTemporaryMod.Invoke("VenueSync", guid, 0);
-                _penumbraAddTemporaryMod.Invoke("VenueSync", guid, fileList, manipulationData, 0);
-            }
-            catch (Exception exception)
-            {
-                VenueSync.Log.Error($"Failed to create mod: {exception.Message}");
-            }
+            _penumbraAssignTemporaryCollection.Invoke(guid, idx, true);
+            _penumbraRemoveTemporaryMod.Invoke("VenueSync", guid, 0);
+            _penumbraAddTemporaryMod.Invoke("VenueSync", guid, fileList, manipulationData, 0);
 
-            VenueSync.Log.Debug($"Assigned Temp Collection: {idx}");
-            VenueSync.Log.Debug($"Created Temp Mod");
+            VenueSync.Log.Debug($"Successfully loaded mod for {collName}");
 
             _collectionIds[uid] = guid;
         }
         catch (Exception exception)
         {
-            VenueSync.Log.Error($"Failed to create temp mod: {exception.Message}");
+            VenueSync.Log.Error($"Failed to load mod: {exception.Message}");
         }
     }
 
@@ -263,24 +239,26 @@ public class VenueService : IDisposable
         
         try
         {
-            ushort idx = mannequinActor.Value.Objects[0].Index.Index;
-            string uid = mannequin.id;
-
-            ManipulationDataRecord manipulationData = _manipulationDataManager.BuildManipulationData(mannequinActor, mods);
+            var idx = mannequinActor.Value.Objects[0].Index.Index;
+            var uid = mannequin.id;
 
             if (!_syncFileService.VerifyModFiles(mods))
             {
+                VenueSync.Log.Debug($"Mod files missing for {mannequin.name}, downloading...");
                 _syncFileService.DownloadModFiles(mods);
+                _hasQueuedReload = true;
                 return;
             }
+
+            var manipulationData = _manipulationDataManager.BuildManipulationData(mannequinActor, mods);
             
-            VenueSync.Log.Debug($"Setting Meta for Mod: {manipulationData.ManipulationString}");
+            VenueSync.Log.Debug($"Setting up mod for {mannequin.name}");
             
             LoadMod(uid, idx, _syncFileService.BuildModFileList(manipulationData.Paths, mods), manipulationData.ManipulationString);
         }
         catch (Exception exception)
         {
-            VenueSync.Log.Error($"Failed to setup mod: {exception.ToString()}");
+            VenueSync.Log.Error($"Failed to setup mod: {exception}");
         }
     }
 
@@ -293,7 +271,7 @@ public class VenueService : IDisposable
         }
     }
     
-    private async Task LoadLogoTexture(string imagePath)
+    private async Task LoadLogoTextureAsync(string imagePath)
     {
         try
         {
@@ -316,25 +294,15 @@ public class VenueService : IDisposable
 
     private void OnVenueEntered(VenueEnteredData data)
     {
-        _stateService.VenueState.id = data.venue.id;
-        _stateService.VenueState.name = data.venue.name;
-        _stateService.VenueState.location = data.location;
-        _stateService.VenueState.logo = data.venue.logo;
-        _stateService.VenueState.hash = data.venue.hash;
-        _stateService.VenueState.description = data.venue.description;
-        _stateService.VenueState.open_hours = data.venue.open_hours;
-        _stateService.VenueState.discord_invite = data.venue.discord_invite;
-        _stateService.VenueState.carrd_url = data.venue.carrd_url;
-        _stateService.VenueState.staff = data.staff;
-        _stateService.VenueState.tags = data.tags;
-        _stateService.VenueState.streams = data.streams;
+        UpdateVenueState(data.venue, data.location, data.staff, data.tags, data.streams);
         
-        _venueSettings.Load();
-
-        _syncFileService.MaybeDownloadFile(data.venue.id, data.venue.logo, "png", data.venue.hash, path =>
-        {
-            _ = Task.Run(async () => await LoadLogoTexture(path));
-        });
+        _syncFileService.MaybeDownloadFile(
+            data.venue.id, 
+            data.venue.logo, 
+            "png", 
+            data.venue.hash, 
+            path => _ = Task.Run(async () => await LoadLogoTextureAsync(path))
+        );
         
         VenueSync.Messager.NotificationMessage($"Welcome to [{data.venue.name}]", NotificationType.Success);
 
@@ -348,32 +316,41 @@ public class VenueService : IDisposable
 
     private void OnVenueUpdated(VenueUpdatedData data)
     {
-        _stateService.VenueState.id = data.venue.id;
-        _stateService.VenueState.name = data.venue.name;
-        _stateService.VenueState.location = data.location;
-        _stateService.VenueState.logo = data.venue.logo;
-        _stateService.VenueState.hash = data.venue.hash;
-        _stateService.VenueState.description = data.venue.description;
-        _stateService.VenueState.open_hours = data.venue.open_hours;
-        _stateService.VenueState.discord_invite = data.venue.discord_invite;
-        _stateService.VenueState.carrd_url = data.venue.carrd_url;
-        _stateService.VenueState.staff = data.staff;
-        _stateService.VenueState.tags = data.tags;
-        _stateService.VenueState.streams = data.streams;
+        UpdateVenueState(data.venue, data.location, data.staff, data.tags, data.streams);
         
-        _venueSettings.Load();
-        
-        _syncFileService.MaybeDownloadFile(data.venue.id, data.venue.logo, "png", data.venue.hash, path =>
-        {
-            _ = Task.Run(async () => await LoadLogoTexture(path));
-        });
+        _syncFileService.MaybeDownloadFile(
+            data.venue.id, 
+            data.venue.logo, 
+            "png", 
+            data.venue.hash, 
+            path => _ = Task.Run(async () => await LoadLogoTextureAsync(path))
+        );
         
         ReloadAllMods();
+    }
+
+    private void UpdateVenueState(VenueData venue, VenueLocation location, List<VenueStaff> staff, List<string> tags, List<VenueStream> streams)
+    {
+        _stateService.VenueState.id = venue.id;
+        _stateService.VenueState.name = venue.name;
+        _stateService.VenueState.location = location;
+        _stateService.VenueState.logo = venue.logo;
+        _stateService.VenueState.hash = venue.hash;
+        _stateService.VenueState.description = venue.description;
+        _stateService.VenueState.open_hours = venue.open_hours;
+        _stateService.VenueState.discord_invite = venue.discord_invite;
+        _stateService.VenueState.carrd_url = venue.carrd_url;
+        _stateService.VenueState.staff = staff;
+        _stateService.VenueState.tags = tags;
+        _stateService.VenueState.streams = streams;
+        
+        _venueSettings.Load();
     }
 
     private void OnVenueExited(string id)
     {
         DisposeMods();
+        
         if (_windowSystem.VenueWindowOpened())
         {
             _windowSystem.ToggleVenueWindow();
@@ -382,6 +359,7 @@ public class VenueService : IDisposable
 
     private void OnServiceDisconnected()
     {
+        DisposeMods();
         _stateService.ResetVenueState();
     }
 }
