@@ -43,8 +43,6 @@ public class VenueWindow : Window, IDisposable
     private readonly ReloadMods _reloadMods;
     private readonly DisableMods _disableMods;
 
-    private string _selectedStreamId = "";
-
     public VenueWindow(
         IDalamudPluginInterface pluginInterface,
         Configuration configuration,
@@ -546,17 +544,16 @@ public class VenueWindow : Window, IDisposable
         ImGui.Spacing();
 
         var streamNames = venue.streams.Select(s => $"{s.name} ({s.type})").ToArray();
-        var currentIndex = string.IsNullOrEmpty(_selectedStreamId) 
+        var currentIndex = string.IsNullOrEmpty(venue.active_stream) 
             ? 0 
-            : venue.streams.FindIndex(s => s.name == _selectedStreamId);
+            : venue.streams.FindIndex(s => s.name == venue.active_stream);
         
         if (currentIndex < 0) currentIndex = 0;
 
         if (ImGui.Combo("##StreamSelect", ref currentIndex, streamNames, streamNames.Length))
         {
             var selectedStream = venue.streams[currentIndex];
-            _selectedStreamId = selectedStream.name;
-            OnStreamSelected(_selectedStreamId);
+            OnStreamSelected(selectedStream.name);
         }
     }
 
