@@ -151,6 +151,12 @@ public class MainWindow : Window, IDisposable
 
         if (ImGui.Button("Check Venue"))
         {
+            if (_venueWindow.IsOpen)
+            {
+                _venueWindow.Toggle();
+            }
+            _stateService.ResetHouseState();
+            _stateService.ResetVenueState();
             _territoryChanged.Invoke();
         }
     }

@@ -38,11 +38,11 @@ public class TerritoryWatcher: IDisposable
         HouseVerifyWindow houseVerifyWindow,
         ChatService chatService,
         Configuration configuration,
-        ServiceConnected @serviceConnected,
-        VenueExited @venueExited,
-        TerritoryChanged @territoryChanged,
-        LoggedOut @loggedOut,
-        DiceRoll @diceRoll)
+        ServiceConnected serviceConnected,
+        VenueExited venueExited,
+        TerritoryChanged territoryChanged,
+        LoggedOut loggedOut,
+        DiceRoll diceRoll)
     {
         _stateService = stateService;
         _objectTable = objectTable;
@@ -50,11 +50,11 @@ public class TerritoryWatcher: IDisposable
         _houseVerifyWindow = houseVerifyWindow;
         _chatService = chatService;
         _configuration = configuration;
-        _serviceConnected = @serviceConnected;
-        _venueExited = @venueExited;
-        _territoryChanged = @territoryChanged;
-        _diceRoll = @diceRoll;
-        _loggedOut = @loggedOut;
+        _serviceConnected = serviceConnected;
+        _venueExited = venueExited;
+        _territoryChanged = territoryChanged;
+        _diceRoll = diceRoll;
+        _loggedOut = loggedOut;
 
         _territoryChanged.Subscribe(OnTerritoryChanged, TerritoryChanged.Priority.High);
         _serviceConnected.Subscribe(OnConnection, ServiceConnected.Priority.High);

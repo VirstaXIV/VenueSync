@@ -47,6 +47,11 @@ public class StateService: IDisposable
             }
         };
     }
+    
+    public void ResetHouseState()
+    {
+        CurrentHouse = new House();
+    }
 
     private void ResetState()
     {
@@ -59,7 +64,7 @@ public class StateService: IDisposable
         };
         PlayerState = new PlayerState();
         ResetVenueState();
-        CurrentHouse = new House();
+        ResetHouseState();
         ActiveMannequin = new Mannequin();
         VisitorsState = new VisitorsState();
     }
