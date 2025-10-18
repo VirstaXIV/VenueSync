@@ -103,5 +103,7 @@ public class Configuration : IPluginConfiguration, ISavable
         public const string HouseVerifyEndpoint = $"{API_ENDPOINT}/location/verify";
         public const string MeEndpoint = $"{API_ENDPOINT}/me";
         public const string MannequinEndpoint = $"{API_ENDPOINT}/mannequin/update";
+        public const string ActiveStreamEndpoint = $"{API_ENDPOINT}/location/active-stream";
+
     }
 }

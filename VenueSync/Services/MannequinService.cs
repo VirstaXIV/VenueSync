@@ -27,8 +27,8 @@ public class MannequinService: IDisposable
             },
             disposeHandler: false
         );
-        var ver = Assembly.GetExecutingAssembly().GetName().Version;
-        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("VenueSync", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
+        
+        SetUserAgent();
     }
     
     public void Dispose()
@@ -41,48 +41,66 @@ public class MannequinService: IDisposable
         return !_configuration.ServerToken.IsNullOrEmpty();
     }
 
-    private string FormatWorldName(string worldName)
+    private static string FormatWorldName(string worldName)
     {
         return worldName.ToLower();
     }
     
-    private string FormatDataCenter(string dataCenter)
+    private static string FormatDataCenter(string dataCenter)
     {
         return dataCenter.ToLower();
+    }
+
+    private void SetUserAgent()
+    {
+        var ver = Assembly.GetExecutingAssembly().GetName().Version;
+        _httpClient.DefaultRequestHeaders.UserAgent.Add(
+            new ProductInfoHeaderValue("VenueSync", $"{ver!.Major}.{ver.Minor}.{ver.Build}")
+        );
+    }
+
+    private void ConfigureRequestHeaders()
+    {
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _configuration.ServerToken);
+        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        SetUserAgent();
     }
     
     public async Task<UpdateMannequinReply> UpdateMannequin(Mannequin mannequinData, CancellationToken cancellationToken = default)
     {
         if (!HasAuthentication())
         {
-            return new UpdateMannequinReply() {
+            return new UpdateMannequinReply
+            {
                 Success = false,
                 Graceful = true,
                 ErrorMessage = "Cannot grab mannequin without token."
             };
         }
-        _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _configuration.ServerToken);
-        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        var ver = Assembly.GetExecutingAssembly().GetName().Version;
-        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("VenueSync", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
 
-        Uri mannequinUri = new Uri(Configuration.Constants.MannequinEndpoint);
-        var mannequinPayload = new {
+        ConfigureRequestHeaders();
+
+        var mannequinUri = new Uri(Configuration.Constants.MannequinEndpoint);
+        var mannequinPayload = new
+        {
             ffxiv_id = mannequinData.ffxiv_id,
             name = mannequinData.name,
             world = FormatWorldName(mannequinData.world),
             data_center = FormatDataCenter(mannequinData.data_center),
         };
+
         try
         {
             var response = await _httpClient.PostAsJsonAsync(mannequinUri, mannequinPayload, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var mannequin = await response.Content.ReadFromJsonAsync<UpdateMannequinResponse>(cancellationToken: cancellationToken)
                                           .ConfigureAwait(false);
+
             if (mannequin is null)
             {
-                return new UpdateMannequinReply() {
+                return new UpdateMannequinReply
+                {
                     Success = false,
                     ErrorMessage = "Malformed Response"
                 };
@@ -90,7 +108,8 @@ public class MannequinService: IDisposable
 
             if (!mannequin.success)
             {
-                return new UpdateMannequinReply() {
+                return new UpdateMannequinReply
+                {
                     Success = false,
                     ErrorMessage = "Mannequin Request Failed."
                 };
@@ -99,13 +118,15 @@ public class MannequinService: IDisposable
         catch (Exception exception)
         {
             VenueSync.Log.Debug($"HTTP Error: {exception.Message}");
-            return new UpdateMannequinReply() {
+            return new UpdateMannequinReply
+            {
                 Success = false,
                 ErrorMessage = "Failed to communicate with mannequin service."
             };
         }
 
-        return new UpdateMannequinReply() {
+        return new UpdateMannequinReply
+        {
             Success = true
         };
     }

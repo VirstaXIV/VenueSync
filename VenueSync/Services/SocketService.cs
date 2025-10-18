@@ -123,7 +123,7 @@ public class SocketService: IDisposable
     private void OnVenueExited(string id)
     {
         VenueSync.Log.Debug($"Leaving venue channel: {id}");
-        _ = Task.Run(async () => await RemoveChannelAsync($"venue.{id}").ConfigureAwait(false));
+        _ = Task.Run(async () => await RemoveChannelAsync($"presence-venue.{id}").ConfigureAwait(false));
     }
     
     private Pusher CreatePusher()
@@ -198,7 +198,7 @@ public class SocketService: IDisposable
             {
                 BindUserChannelEvents(channel);
             }
-            else if (channelName.StartsWith("venue."))
+            else if (channelName.StartsWith("presence-venue."))
             {
                 BindVenueChannelEvents(channel);
             }
@@ -245,7 +245,7 @@ public class SocketService: IDisposable
                 VenueSync.Log.Debug($"Processing venue.entered for venue ID: {enteredData.venue.id}");
                 _venueEntered.Invoke(enteredData);
                 _ = Task.Run(async () => 
-                    await AddChannelAsync($"venue.{enteredData.venue.id}").ConfigureAwait(false));
+                    await AddChannelAsync($"presence-venue.{enteredData.venue.id}").ConfigureAwait(false));
             }
         }
         catch (Exception ex)

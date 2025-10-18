@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -33,12 +35,15 @@ public class VenueWindow : Window, IDisposable
     private readonly Configuration _configuration;
     private readonly VenueSettings _venueSettings;
     private readonly StateService _stateService;
+    private readonly LocationService _locationService;
     private readonly SyncFileService _syncFileService;
     private readonly GuestListWidget _guestListWidget;
     private readonly StaffListWidget _staffListWidget;
     private readonly VenueWindowPosition _position;
     private readonly ReloadMods _reloadMods;
     private readonly DisableMods _disableMods;
+
+    private string _selectedStreamId = "";
 
     public VenueWindow(
         IDalamudPluginInterface pluginInterface,
@@ -48,6 +53,7 @@ public class VenueWindow : Window, IDisposable
         GuestListWidget guestListWidget,
         StaffListWidget staffListWidget,
         StateService stateService,
+        LocationService locationService,
         VenueWindowPosition position,
         ReloadMods reloadMods,
         DisableMods disableMods,
@@ -63,6 +69,7 @@ public class VenueWindow : Window, IDisposable
         _configuration = configuration;
         _venueSettings = venueSettings;
         _stateService = stateService;
+        _locationService = locationService;
         _syncFileService = syncFileService;
         _guestListWidget = guestListWidget;
         _staffListWidget = staffListWidget;
@@ -162,13 +169,13 @@ public class VenueWindow : Window, IDisposable
 
     private void DrawLiveStream(VenueState venue)
     {
-        var liveStream = venue.streams.FirstOrDefault();
+        var liveStream = venue.streams.FirstOrDefault(v => v.name == venue.active_stream);
         if (liveStream == null) return;
 
         ImGui.SetCursorPosX((SidebarWidth - StreamButtonWidth) / 2);
 
-        var buttonText = $"{liveStream.name} LIVE";
-        var tooltip = $"{liveStream.title}\n{liveStream.viewers} viewers";
+        var buttonText = $"{liveStream.name}";
+        var tooltip = $"Watch {liveStream.name} live on Twitch";
         
         DrawStyledButton(buttonText, VenueColors.TwitchButton, VenueColors.TwitchButtonHover, 
             new Vector2(StreamButtonWidth, ButtonHeight), 
@@ -325,6 +332,15 @@ public class VenueWindow : Window, IDisposable
                 }
             }
 
+            if (IsCurrentPlayerStaff())
+            {
+                if (ImGui.BeginTabItem("Moderation"))
+                {
+                    DrawModerationTab();
+                    ImGui.EndTabItem();
+                }
+            }
+
             ImGui.EndTabBar();
         }
 
@@ -376,7 +392,7 @@ public class VenueWindow : Window, IDisposable
         ImGui.Spacing();
     }
 
-    private void DrawTags(System.Collections.Generic.List<string> tags)
+    private void DrawTags(List<string> tags)
     {
         ImGui.Text("Tags: ");
         foreach (var tag in tags)
@@ -391,24 +407,37 @@ public class VenueWindow : Window, IDisposable
         ImGui.Spacing();
     }
 
-    private void DrawStreamsList(System.Collections.Generic.List<VenueStream> streams)
+    private void DrawStreamsList(List<VenueStream> streams)
     {
         if (streams.Count == 0) return;
 
         ImGui.Spacing();
-        ImGui.Text("Live Streams:");
+        ImGui.TextColored(VenueColors.SectionHeader, "Streams");
+        ImGui.Spacing();
+        ImGui.Separator();
         ImGui.Spacing();
 
+        var i = 1;
         foreach (var stream in streams)
         {
-            var buttonText = stream.live
-                ? $"{stream.name} - LIVE ({stream.viewers} viewers)"
-                : stream.name;
+            var isActive = stream.name == _stateService.VenueState.active_stream;
+            var buttonText = stream.name;
+            var tooltip = $"Visit {stream.name} on Twitch";
 
-            var tooltip = stream.live ? $"Streaming: {stream.title}" : null;
+            var buttonColor = isActive ? VenueColors.TwitchButton : new Vector4(0.4f, 0.4f, 0.5f, 1.0f);
+            var hoverColor = isActive ? VenueColors.TwitchButtonHover : new Vector4(0.5f, 0.5f, 0.6f, 1.0f);
 
-            DrawStyledButton(buttonText, VenueColors.TwitchButton, VenueColors.TwitchButtonHover,
-                new Vector2(400, 25), () => Util.OpenLink($"https://twitch.tv/{stream.name}"), tooltip);
+            DrawStyledButton(buttonText, buttonColor, hoverColor,
+                new Vector2(100, 30), () => Util.OpenLink($"https://twitch.tv/{stream.name}"), tooltip);
+            if (i % 4 != 0)
+            {
+                ImGui.SameLine();
+            }
+            else
+            {
+                ImGui.Spacing();
+            }
+            i++;
         }
     }
 
@@ -487,5 +516,54 @@ public class VenueWindow : Window, IDisposable
         {
             ImGui.SetTooltip(tooltip);
         }
+    }
+
+    private bool IsCurrentPlayerStaff()
+    {
+        var venue = _stateService.VenueState;
+        var playerName = _stateService.PlayerState.name;
+
+        return venue.staff.Any(staff => staff.name.Equals(playerName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void DrawModerationTab()
+    {
+        var venue = _stateService.VenueState;
+
+        ImGui.Spacing();
+        ImGui.TextColored(VenueColors.SectionHeader, "Active Stream");
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        if (venue.streams.Count == 0)
+        {
+            ImGui.TextWrapped("No streams available.");
+            return;
+        }
+
+        ImGui.Text("Select Stream:");
+        ImGui.Spacing();
+
+        var streamNames = venue.streams.Select(s => $"{s.name} ({s.type})").ToArray();
+        var currentIndex = string.IsNullOrEmpty(_selectedStreamId) 
+            ? 0 
+            : venue.streams.FindIndex(s => s.name == _selectedStreamId);
+        
+        if (currentIndex < 0) currentIndex = 0;
+
+        if (ImGui.Combo("##StreamSelect", ref currentIndex, streamNames, streamNames.Length))
+        {
+            var selectedStream = venue.streams[currentIndex];
+            _selectedStreamId = selectedStream.name;
+            OnStreamSelected(_selectedStreamId);
+        }
+    }
+
+    private void OnStreamSelected(string streamId)
+    {
+        VenueSync.Log.Information($"Stream selected: {streamId}");
+
+        _ = Task.Run(async () => await _locationService.SendActiveStream(_stateService.VenueState.id, _stateService.VenueState.location.id, streamId).ConfigureAwait(false));
     }
 }

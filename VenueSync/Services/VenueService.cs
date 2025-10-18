@@ -343,6 +343,7 @@ public class VenueService : IDisposable
         _stateService.VenueState.staff = staff;
         _stateService.VenueState.tags = tags;
         _stateService.VenueState.streams = streams;
+        _stateService.VenueState.active_stream = venue.active_stream;
         
         _venueSettings.Load();
     }

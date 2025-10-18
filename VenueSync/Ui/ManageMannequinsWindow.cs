@@ -10,6 +10,7 @@ using Penumbra.GameData.Enums;
 using Penumbra.GameData.Interop;
 using VenueSync.Services;
 using VenueSync.State;
+using System.Collections.Generic;
 
 namespace VenueSync.Ui;
 
@@ -27,7 +28,7 @@ public class ManageMannequinsWindow : Window, IDisposable
     private readonly ManageMannequinsWindowPosition _position;
     private readonly ActorObjectManager _objects;
     
-    private bool _isUpdating = false;
+    private HashSet<string> _updatingMannequins = new();
     
     public ManageMannequinsWindow(IDalamudPluginInterface pluginInterface,
         StateService stateService, ManageMannequinsWindowPosition position, ActorObjectManager objects,
@@ -78,10 +79,11 @@ public class ManageMannequinsWindow : Window, IDisposable
                 ImGui.TableNextColumn();
                 ImGui.TextColored(new Vector4(1,1,1,1), mannequin.Value.Label);
                 ImGui.TableNextColumn();
-                ImGui.BeginDisabled(_isUpdating);
-                if (ImGui.Button("Update"))
+                var isThisOneUpdating = _updatingMannequins.Contains(mannequin.Value.Label);
+                ImGui.BeginDisabled(isThisOneUpdating);
+                if (ImGui.Button($"Update##{mannequin.Value.Label}"))
                 {
-                    _isUpdating = true;
+                    _updatingMannequins.Add(mannequin.Value.Label);
                     var mannequinToUpdate = mannequin.Value;
                     _ = Task.Run(async () =>
                     {
@@ -102,9 +104,9 @@ public class ManageMannequinsWindow : Window, IDisposable
                             VenueSync.Log.Debug($"Mannequin Updated Failed: {reply.ErrorMessage}");
                         }
                         
-                        _isUpdating = false;
+                        _updatingMannequins.Remove(mannequinToUpdate.Label);
                     });
-                    VenueSync.Log.Debug("Mannequin Update requested");
+                    VenueSync.Log.Debug($"Mannequin Update requested for {mannequinToUpdate.Label}");
                 }
                 ImGui.EndDisabled();
             }

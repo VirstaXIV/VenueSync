@@ -13,6 +13,7 @@ public record VenueData
     public string open_hours { get; set; } = "";
     public string discord_invite { get; set; } = "";
     public string carrd_url { get; set; } = "";
+    public string active_stream { get; set; } = "";
 }
 
 public record MannequinItem
@@ -45,6 +46,7 @@ public record MannequinModItem
 
 public record VenueLocation
 {
+    public string id { get; set; } = "";
     public string name { get; set; } = "";
     public string type { get; set; } = "";
     public string house_name { get; set; } = "";
@@ -84,6 +86,7 @@ public record VenueState
     public string carrd_url { get; set; } = "";
     public string hash { get; set; } = "";
     public string open_hours { get; set; } = "";
+    public string active_stream { get; set; } = "";
     public List<string> tags { get; set; } = new();
     public IDalamudTextureWrap? logoTexture;
     public required VenueLocation location { get; set; }
