@@ -4,14 +4,14 @@
         "Name": "VenueSync",
         "Description": "Provides information on venues and data related to them.",
         "InternalName": "VenueSync",
-        "AssemblyVersion": "0.6.1",
+        "AssemblyVersion": "0.6.2",
         "RepoUrl": "https://github.com/VirstaXIV/VenueSync",
         "ApplicableVersion": "any",
         "DalamudApiLevel": 13,
         "Punchline": "Venue data syncing and management.",
-        "DownloadLinkInstall": "https://github.com/VirstaXIV/VenueSync/releases/download/0.6.1/latest.zip",
-        "DownloadLinkTesting": "https://github.com/VirstaXIV/VenueSync/releases/download/0.6.1/latest.zip",
-        "DownloadLinkUpdate": "https://github.com/VirstaXIV/VenueSync/releases/download/0.6.1/latest.zip",
+        "DownloadLinkInstall": "https://github.com/VirstaXIV/VenueSync/releases/download/0.6.2/latest.zip",
+        "DownloadLinkTesting": "https://github.com/VirstaXIV/VenueSync/releases/download/0.6.2/latest.zip",
+        "DownloadLinkUpdate": "https://github.com/VirstaXIV/VenueSync/releases/download/0.6.2/latest.zip",
         "IconUrl": "https://raw.githubusercontent.com/VirstaXIV/VenueSync/master/images/icon.png"
     }
 ]
