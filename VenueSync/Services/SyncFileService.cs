@@ -583,13 +583,29 @@ public class SyncFileService : IDisposable
         var index = 0;
         foreach (var mod in mods)
         {
-            filePaths.Add(paths[index], GetLocalFilePath(mod.id, mod.extension));
-            foreach (var file in mod.files)
+            var modPaths = BuildModFileList(paths[index], mod);
+            foreach (var modPath in modPaths)
             {
-                filePaths.Add(file.path, GetLocalFilePath(file.id, file.extension));
+                filePaths.Add(modPath.Key, modPath.Value);
             }
 
             index += 1;
+        }
+
+        return filePaths;
+    }
+    
+    public Dictionary<string, string> BuildModFileList(string path, MannequinModItem mod)
+    {
+        var filePaths = new Dictionary<string, string> {
+            {
+                path, GetLocalFilePath(mod.id, mod.extension)
+            }
+        };
+
+        foreach (var file in mod.files)
+        {
+            filePaths.Add(file.path, GetLocalFilePath(file.id, file.extension));
         }
 
         return filePaths;

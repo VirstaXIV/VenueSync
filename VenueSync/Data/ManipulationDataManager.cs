@@ -31,6 +31,7 @@ public record ManipulationRecord
 public record ManipulationDataRecord
 {
     public List<string> Paths { get; set; } = [];
+    public string Path { get; set; } = "";
     public string ManipulationString { get; set; } = "";
 }
 
@@ -83,6 +84,22 @@ public class ManipulationDataManager: IService
         return new ManipulationDataRecord() {
             Paths = paths,
             ManipulationString = GetManipulationString(imcs)
+        };
+    }
+
+    public ManipulationDataRecord BuildManipulationDataForSlot(KeyValuePair<ActorIdentifier, ActorData> mannequin, EquipSlot slot)
+    {
+        var imc = GetMannequinSlot(mannequin, slot);
+        var path = GetPath(imc);
+        var records = new List<ManipulationRecord>
+        {
+            new() { Manipulation = imc }
+        };
+
+        return new ManipulationDataRecord
+        {
+            Path = path,
+            ManipulationString = GetManipulationString(records)
         };
     }
 
