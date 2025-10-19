@@ -237,20 +237,7 @@ public class VenueWindow : Window, IDisposable
         {
             var userEnabled = displayEnabled;
 
-            if (_configuration.AutoloadMods)
-            {
-                if (userEnabled)
-                    _venueSettings.InactiveMods.Remove(id);
-                else
-                    _venueSettings.InactiveMods.Add(id);
-            }
-            else
-            {
-                if (userEnabled)
-                    _venueSettings.ActiveMods.Add(id);
-                else
-                    _venueSettings.ActiveMods.Remove(id);
-            }
+            UpdateModState(id, userEnabled);
 
             if (userEnabled && failed)
             {
@@ -281,22 +268,24 @@ public class VenueWindow : Window, IDisposable
         {
             if (isEnabled)
             {
-                _venueSettings.InactiveMods.Remove(id);
+                while (_venueSettings.InactiveMods.Remove(id)) { }
             }
             else
             {
-                _venueSettings.InactiveMods.Add(id);
+                if (!_venueSettings.InactiveMods.Contains(id))
+                    _venueSettings.InactiveMods.Add(id);
             }
         }
         else
         {
             if (isEnabled)
             {
-                _venueSettings.ActiveMods.Add(id);
+                if (!_venueSettings.ActiveMods.Contains(id))
+                    _venueSettings.ActiveMods.Add(id);
             }
             else
             {
-                _venueSettings.ActiveMods.Remove(id);
+                while (_venueSettings.ActiveMods.Remove(id)) { }
             }
         }
     }

@@ -1,8 +1,4 @@
 using System;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Utility;
@@ -13,27 +9,18 @@ namespace VenueSync.Services;
 
 public class MannequinService: IDisposable
 {
-    private readonly HttpClient _httpClient;
     private readonly Configuration _configuration;
+    private readonly ApiService _api;
 
     public MannequinService(Configuration configuration)
     {
         _configuration = configuration;
-        _httpClient = new HttpClient(
-            new HttpClientHandler()
-            {
-                AllowAutoRedirect = false,
-                MaxAutomaticRedirections = 3
-            },
-            disposeHandler: false
-        );
-        
-        SetUserAgent();
+        _api = new ApiService(configuration);
     }
-    
+
     public void Dispose()
     {
-        _httpClient.Dispose();
+        _api.Dispose();
     }
 
     private bool HasAuthentication()
@@ -45,28 +32,12 @@ public class MannequinService: IDisposable
     {
         return worldName.ToLower();
     }
-    
+
     private static string FormatDataCenter(string dataCenter)
     {
         return dataCenter.ToLower();
     }
 
-    private void SetUserAgent()
-    {
-        var ver = Assembly.GetExecutingAssembly().GetName().Version;
-        _httpClient.DefaultRequestHeaders.UserAgent.Add(
-            new ProductInfoHeaderValue("VenueSync", $"{ver!.Major}.{ver.Minor}.{ver.Build}")
-        );
-    }
-
-    private void ConfigureRequestHeaders()
-    {
-        _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _configuration.ServerToken);
-        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        SetUserAgent();
-    }
-    
     public async Task<UpdateMannequinReply> UpdateMannequin(Mannequin mannequinData, CancellationToken cancellationToken = default)
     {
         if (!HasAuthentication())
@@ -79,9 +50,6 @@ public class MannequinService: IDisposable
             };
         }
 
-        ConfigureRequestHeaders();
-
-        var mannequinUri = new Uri(Configuration.Constants.MannequinEndpoint);
         var mannequinPayload = new
         {
             ffxiv_id = mannequinData.ffxiv_id,
@@ -92,11 +60,22 @@ public class MannequinService: IDisposable
 
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(mannequinUri, mannequinPayload, cancellationToken).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            var mannequin = await response.Content.ReadFromJsonAsync<UpdateMannequinResponse>(cancellationToken: cancellationToken)
-                                          .ConfigureAwait(false);
+            var result = await _api.SendAsync<UpdateMannequinResponse>(
+                "mannequin.update",
+                body: mannequinPayload,
+                ct: cancellationToken
+            ).ConfigureAwait(false);
 
+            if (!result.Success)
+            {
+                return new UpdateMannequinReply
+                {
+                    Success = false,
+                    ErrorMessage = result.ErrorMessage ?? "Mannequin Request Failed."
+                };
+            }
+
+            var mannequin = result.Data;
             if (mannequin is null)
             {
                 return new UpdateMannequinReply

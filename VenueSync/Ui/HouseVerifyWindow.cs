@@ -20,50 +20,54 @@ public class HouseVerifyWindowPosition : IService
 
 public class HouseVerifyWindow : Window, IDisposable
 {
-    private readonly Configuration _configuration;
-    private readonly StateService _stateService;
-    private readonly AccountService _accountService;
-    private readonly LocationService _locationService;
+    private readonly StateService              _stateService;
+    private readonly AccountService            _accountService;
+    private readonly LocationService           _locationService;
     private readonly HouseVerifyWindowPosition _position;
-    
-    public long _ownedHouseId = 0;
-    public int _ownedHousePlot = 0;
-    public int _ownedHouseWard = 0;
-    
-    private bool _isVerifying = false;
-    
-    public HouseVerifyWindow(IDalamudPluginInterface pluginInterface, Configuration configuration, 
-        StateService stateService, HouseVerifyWindowPosition position, LocationService locationService, AccountService accountService) : base("VenueSyncHouseVerifyWindow")
+
+    public long _ownedHouseId   = 0;
+    public int  _ownedHousePlot = 0;
+    public int  _ownedHouseWard = 0;
+
+    private bool _isVerifying;
+
+    public HouseVerifyWindow(
+        IDalamudPluginInterface   pluginInterface,
+        StateService              stateService,
+        HouseVerifyWindowPosition position,
+        LocationService           locationService,
+        AccountService            accountService
+    ) : base("VenueSyncHouseVerifyWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
-        SizeConstraints = new WindowSizeConstraints() {
+        SizeConstraints = new WindowSizeConstraints
+        {
             MinimumSize = new Vector2(400, 350),
             MaximumSize = new Vector2(400, 350),
         };
-        _configuration = configuration;
-        _stateService = stateService;
-        _accountService = accountService;
+        _stateService    = stateService;
+        _accountService  = accountService;
         _locationService = locationService;
-        _position = position;
+        _position        = position;
     }
-    
+
     public override void PreDraw()
     {
         _position.IsOpen = IsOpen;
-        WindowName = $"Verify House Ownership###VenueSyncHouseVerifyWindow";
+        WindowName       = "Verify House Ownership###VenueSyncHouseVerifyWindow";
     }
 
     public void Dispose()
     {
         _position.IsOpen = false;
-        _ownedHouseId = 0;
-        _ownedHousePlot = 0;
-        _ownedHouseWard = 0;
+        _ownedHouseId    = 0;
+        _ownedHousePlot  = 0;
+        _ownedHouseWard  = 0;
     }
 
     public override void Draw()
     {
-        _position.Size = ImGui.GetWindowSize();
+        _position.Size     = ImGui.GetWindowSize();
         _position.Position = ImGui.GetWindowPos();
 
         if (!_stateService.Connection.Connected)
@@ -80,78 +84,46 @@ public class HouseVerifyWindow : Window, IDisposable
         using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudGrey))
         {
             ImGui.PushTextWrapPos(0);
-            ImGui.TextUnformatted("Note: Verification will involve manual review. " +
-                                  "Once submitted, a moderator will manually check your placard. " +
-                                  "House verification is meant for venues, so not everyone will need it.");
+            ImGui.TextUnformatted(
+                "Note: Verification will involve manual review. " +
+                "Once submitted, a moderator will manually check your placard. " +
+                "House verification is meant for venues, so not everyone will need it."
+            );
             ImGui.PopTextWrapPos();
         }
 
         ImGui.Spacing();
         ImGui.Spacing();
         ImGui.Spacing();
-        
-        ImGui.TextUnformatted("Here is the known details on your Personal House.");
-        
-        var characterName = _stateService.PlayerState.name;
-        var lodestoneId = string.Empty;
 
-        foreach (var character in _stateService.UserState.characters)
-        {
-            if (characterName == character.name)
-            {
-                lodestoneId = character.lodestone_id;
-                break;
-            }
-        }
+        ImGui.TextUnformatted("Here are the known details on your Personal House.");
 
-        var foundPlot = _ownedHousePlot.ToString();
-        var foundWard = _ownedHouseWard.ToString();
-        var foundWorld = _stateService.PlayerState.world;
+        var characterName   = _stateService.PlayerState.name;
+        var lodestoneId     = GetLodestoneId(characterName);
+        var foundPlot       = _ownedHousePlot.ToString();
+        var foundWard       = _ownedHouseWard.ToString();
+        var foundWorld      = _stateService.PlayerState.world;
         var foundDatacenter = _stateService.PlayerState.data_center;
-        
+
         ImGui.InputText("Character Name", ref characterName, 255, ImGuiInputTextFlags.ReadOnly);
         ImGui.InputText("Lodestone ID", ref lodestoneId, 255, ImGuiInputTextFlags.ReadOnly);
-        ImGui.InputText("Plot", ref foundPlot, 255, ImGuiInputTextFlags.ReadOnly);
-        ImGui.InputText("Ward", ref foundWard, 255, ImGuiInputTextFlags.ReadOnly);
-        
-        ImGui.InputText("World", ref foundWorld, 255, ImGuiInputTextFlags.ReadOnly);
-        ImGui.InputText("Datacenter", ref foundDatacenter, 255, ImGuiInputTextFlags.ReadOnly);
-        
+        ImGui.InputText("Plot",           ref foundPlot, 255, ImGuiInputTextFlags.ReadOnly);
+        ImGui.InputText("Ward",           ref foundWard, 255, ImGuiInputTextFlags.ReadOnly);
+        ImGui.InputText("World",          ref foundWorld, 255, ImGuiInputTextFlags.ReadOnly);
+        ImGui.InputText("Datacenter",     ref foundDatacenter, 255, ImGuiInputTextFlags.ReadOnly);
+
         ImGui.Spacing();
-        if (_ownedHouseId == _stateService.CurrentHouse.HouseId)
+
+        var isAtOwnedHouse = _ownedHouseId == _stateService.CurrentHouse.HouseId;
+
+        if (isAtOwnedHouse)
         {
             ImGui.BeginDisabled(_isVerifying);
             if (ImGui.Button("Verify"))
             {
-                _isVerifying = true;
                 VenueSync.Log.Debug("Verifying house");
-                _ = Task.Run(async () =>
-                {
-                    var reply = await _locationService.VerifyLocation(characterName, lodestoneId, _stateService.CurrentHouse);
-                    if (reply is { Success: false, Graceful: false })
-                    {
-                        VenueSync.Log.Warning($"Failed to verify location: {reply.ErrorMessage}");
-                        
-                        _isVerifying = false;
-                    }
-                    else
-                    {
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                await _accountService.User();
-                            }
-                            catch (Exception ex)
-                            {
-                                VenueSync.Log.Warning($"Failed to update user state: {ex.Message}");
-                            }
-                            
-                            _isVerifying = false;
-                        });
-                        VenueSync.Log.Debug("House verified.");
-                    }
-                });
+                _isVerifying = true;
+                _ = VerifyAsync(characterName, lodestoneId);
             }
             ImGui.EndDisabled();
 
@@ -163,6 +135,51 @@ public class HouseVerifyWindow : Window, IDisposable
         else
         {
             ImGui.TextUnformatted("To Verify, enter your house.");
+        }
+    }
+
+    private string GetLodestoneId(string characterName)
+    {
+        foreach (var character in _stateService.UserState.characters)
+        {
+            if (characterName == character.name)
+            {
+                return character.lodestone_id;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private async Task VerifyAsync(string characterName, string lodestoneId)
+    {
+        try
+        {
+            var reply = await _locationService.VerifyLocation(characterName, lodestoneId, _stateService.CurrentHouse);
+            if (reply is { Success: false, Graceful: false })
+            {
+                VenueSync.Log.Warning($"Failed to verify location: {reply.ErrorMessage}");
+                return;
+            }
+
+            VenueSync.Log.Debug("House verified.");
+
+            try
+            {
+                await _accountService.User();
+            }
+            catch (Exception ex)
+            {
+                VenueSync.Log.Warning($"Failed to update user state: {ex.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Warning($"Unexpected error during verification: {ex.Message}");
+        }
+        finally
+        {
+            _isVerifying = false;
         }
     }
 }

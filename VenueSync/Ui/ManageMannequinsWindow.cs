@@ -28,27 +28,32 @@ public class ManageMannequinsWindow : Window, IDisposable
     private readonly ManageMannequinsWindowPosition _position;
     private readonly ActorObjectManager _objects;
     
-    private HashSet<string> _updatingMannequins = new();
-    
-    public ManageMannequinsWindow(IDalamudPluginInterface pluginInterface,
-        StateService stateService, ManageMannequinsWindowPosition position, ActorObjectManager objects,
-        MannequinService mannequinService) : base("VenueSyncManageMannequinsWindow")
+    private readonly HashSet<string> _updatingMannequins = new();
+
+    public ManageMannequinsWindow(
+        IDalamudPluginInterface pluginInterface,
+        StateService            stateService,
+        ManageMannequinsWindowPosition position,
+        ActorObjectManager      objects,
+        MannequinService        mannequinService
+    ) : base("VenueSyncManageMannequinsWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
-        SizeConstraints = new Window.WindowSizeConstraints() {
+        SizeConstraints = new Window.WindowSizeConstraints()
+        {
             MinimumSize = new Vector2(400, 350),
             MaximumSize = new Vector2(400, 350),
         };
-        _stateService = stateService;
+        _stateService     = stateService;
         _mannequinService = mannequinService;
-        _objects = objects;
-        _position = position;
+        _objects          = objects;
+        _position         = position;
     }
-    
+
     public override void PreDraw()
     {
         _position.IsOpen = IsOpen;
-        WindowName = $"Manage Mannequins###VenueSyncManageMannequinsWindow";
+        WindowName       = "Manage Mannequins###VenueSyncManageMannequinsWindow";
     }
 
     public void Dispose()
@@ -58,61 +63,108 @@ public class ManageMannequinsWindow : Window, IDisposable
 
     public override void Draw()
     {
-        _position.Size = ImGui.GetWindowSize();
+        _position.Size     = ImGui.GetWindowSize();
         _position.Position = ImGui.GetWindowPos();
-        
+
         if (!_stateService.Connection.Connected)
         {
             ImGui.TextUnformatted("Not Connected");
             return;
         }
-        
-        ImGui.TextUnformatted("Manage Mannequins");
-        
-        if (ImGui.BeginTable("Houses", 2))
+
+        if (_stateService.CurrentHouse.HouseId == 0)
         {
-            var mannequinList = _objects
-                .Where(p => p.Value.Objects.Any(a => a.Model))
-                .Where(p => p.Key.Type is IdentifierType.Retainer);
-            foreach (var mannequin in mannequinList)
+            ImGui.TextUnformatted("Enter your house to manage mannequins.");
+            return;
+        }
+
+        ImGui.TextUnformatted("Manage Mannequins");
+
+        ImGui.Spacing();
+        ImGui.PushTextWrapPos(0f);
+        ImGui.TextUnformatted(
+            "This list shows all mannequins detected in your current house. " +
+            "Click Update to send each mannequin to the service and refresh related data."
+        );
+        ImGui.PopTextWrapPos();
+        ImGui.Spacing();
+
+        var mannequins = _objects
+            .Where(p => p.Value.Objects.Any(a => a.Model))
+            .Where(p => p.Key.Type is IdentifierType.Retainer)
+            .ToList();
+
+        if (mannequins.Count == 0)
+        {
+            ImGui.TextUnformatted("No mannequins were detected in this house.");
+            return;
+        }
+
+        if (ImGui.BeginTable("MannequinsTable", 2))
+        {
+            ImGui.TableSetupColumn("Mannequin");
+            ImGui.TableSetupColumn("Action");
+            ImGui.TableHeadersRow();
+
+            foreach (var mannequin in mannequins)
             {
                 ImGui.TableNextColumn();
-                ImGui.TextColored(new Vector4(1,1,1,1), mannequin.Value.Label);
+                ImGui.TextUnformatted(mannequin.Value.Label);
+
                 ImGui.TableNextColumn();
-                var isThisOneUpdating = _updatingMannequins.Contains(mannequin.Value.Label);
-                ImGui.BeginDisabled(isThisOneUpdating);
-                if (ImGui.Button($"Update##{mannequin.Value.Label}"))
+                var label = mannequin.Value.Label;
+                var isUpdating = _updatingMannequins.Contains(label);
+
+                ImGui.BeginDisabled(isUpdating);
+                if (ImGui.Button($"Update##{label}"))
                 {
-                    _updatingMannequins.Add(mannequin.Value.Label);
-                    var mannequinToUpdate = mannequin.Value;
-                    _ = Task.Run(async () =>
-                    {
-                        var mannequinData = new Mannequin() {
-                            ffxiv_id = _stateService.CurrentHouse.HouseId,
-                            name = mannequinToUpdate.Label,
-                            world = _stateService.PlayerState.world,
-                            data_center = _stateService.PlayerState.data_center,
-                        };
-                       
-                        var reply = await _mannequinService.UpdateMannequin(mannequinData);
-                        if (reply.Success)
-                        {
-                            VenueSync.Log.Debug("Mannequin Updated Successfully");
-                        }
-                        else
-                        {
-                            VenueSync.Log.Debug($"Mannequin Updated Failed: {reply.ErrorMessage}");
-                        }
-                        
-                        _updatingMannequins.Remove(mannequinToUpdate.Label);
-                    });
-                    VenueSync.Log.Debug($"Mannequin Update requested for {mannequinToUpdate.Label}");
+                    _updatingMannequins.Add(label);
+                    _ = UpdateMannequinAsync(label);
+                    VenueSync.Log.Debug($"Mannequin update requested for {label}");
                 }
                 ImGui.EndDisabled();
+
+                if (!isUpdating)
+                {
+                    continue;
+                }
+                ImGui.SameLine();
+                ImGui.TextUnformatted("Updating...");
             }
-            
+
             ImGui.EndTable();
         }
-        
+    }
+
+    private async Task UpdateMannequinAsync(string label)
+    {
+        try
+        {
+            var mannequinData = new Mannequin
+            {
+                ffxiv_id    = _stateService.CurrentHouse!.HouseId,
+                name        = label,
+                world       = _stateService.PlayerState.world,
+                data_center = _stateService.PlayerState.data_center,
+            };
+
+            var reply = await _mannequinService.UpdateMannequin(mannequinData);
+            if (reply.Success)
+            {
+                VenueSync.Log.Debug("Mannequin updated successfully.");
+            }
+            else
+            {
+                VenueSync.Log.Warning($"Mannequin update failed: {reply.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Warning($"Unexpected error while updating mannequin '{label}': {ex.Message}");
+        }
+        finally
+        {
+            _updatingMannequins.Remove(label);
+        }
     }
 }

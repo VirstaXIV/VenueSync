@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Utility;
@@ -13,27 +9,18 @@ namespace VenueSync.Services;
 
 public class LocationService: IDisposable
 {
-    private readonly HttpClient _httpClient;
     private readonly Configuration _configuration;
+    private readonly ApiService _api;
 
     public LocationService(Configuration configuration)
     {
         _configuration = configuration;
-        _httpClient = new HttpClient(
-            new HttpClientHandler()
-            {
-                AllowAutoRedirect = false,
-                MaxAutomaticRedirections = 3
-            },
-            disposeHandler: false
-        );
-        
-        SetUserAgent();
+        _api = new ApiService(configuration);
     }
-    
+
     public void Dispose()
     {
-        _httpClient.Dispose();
+        _api.Dispose();
     }
 
     private bool HasAuthentication()
@@ -45,28 +32,12 @@ public class LocationService: IDisposable
     {
         return worldName.ToLower();
     }
-    
+
     private string FormatDataCenter(string dataCenter)
     {
         return dataCenter.ToLower();
     }
 
-    private void SetUserAgent()
-    {
-        var ver = Assembly.GetExecutingAssembly().GetName().Version;
-        _httpClient.DefaultRequestHeaders.UserAgent.Add(
-            new ProductInfoHeaderValue("VenueSync", $"{ver!.Major}.{ver.Minor}.{ver.Build}")
-        );
-    }
-
-    private void ConfigureRequestHeaders()
-    {
-        _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _configuration.ServerToken);
-        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        SetUserAgent();
-    }
-    
     public async Task<SendLocationReply> SendLocation(House house, CancellationToken cancellationToken = default)
     {
         if (!HasAuthentication())
@@ -79,9 +50,6 @@ public class LocationService: IDisposable
             };
         }
 
-        ConfigureRequestHeaders();
-
-        var locationUri = new Uri(Configuration.Constants.LocationEndpoint);
         var locationPayload = new
         {
             district = house.District,
@@ -97,11 +65,22 @@ public class LocationService: IDisposable
 
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(locationUri, locationPayload, cancellationToken).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            var location = await response.Content.ReadFromJsonAsync<SendLocationResponse>(cancellationToken: cancellationToken)
-                                         .ConfigureAwait(false);
+            var result = await _api.SendAsync<SendLocationResponse>(
+                "location.send",
+                body: locationPayload,
+                ct: cancellationToken
+            ).ConfigureAwait(false);
 
+            if (!result.Success)
+            {
+                return new SendLocationReply
+                {
+                    Success = false,
+                    ErrorMessage = result.ErrorMessage ?? "Location Request Failed."
+                };
+            }
+
+            var location = result.Data;
             if (location is null)
             {
                 return new SendLocationReply
@@ -135,7 +114,7 @@ public class LocationService: IDisposable
             Success = true
         };
     }
-    
+
     public async Task<VerifyLocationReply> VerifyLocation(string characterName, string lodestoneId, House house, CancellationToken cancellationToken = default)
     {
         if (!HasAuthentication())
@@ -148,9 +127,6 @@ public class LocationService: IDisposable
             };
         }
 
-        ConfigureRequestHeaders();
-
-        var locationUri = new Uri(Configuration.Constants.HouseVerifyEndpoint);
         var locationPayload = new
         {
             character_name = characterName,
@@ -166,11 +142,22 @@ public class LocationService: IDisposable
 
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(locationUri, locationPayload, cancellationToken).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            var location = await response.Content.ReadFromJsonAsync<VerifyLocationResponse>(cancellationToken: cancellationToken)
-                                         .ConfigureAwait(false);
+            var result = await _api.SendAsync<VerifyLocationResponse>(
+                "location.verify",
+                body: locationPayload,
+                ct: cancellationToken
+            ).ConfigureAwait(false);
 
+            if (!result.Success)
+            {
+                return new VerifyLocationReply
+                {
+                    Success = false,
+                    ErrorMessage = result.ErrorMessage ?? "Verify Request Failed."
+                };
+            }
+
+            var location = result.Data;
             if (location is null)
             {
                 return new VerifyLocationReply
@@ -204,7 +191,7 @@ public class LocationService: IDisposable
             Success = true
         };
     }
-    
+
     public async Task<bool> SendActiveStream(string venueId, string locationId, string activeStream, CancellationToken cancellationToken = default)
     {
         if (!HasAuthentication())
@@ -213,9 +200,6 @@ public class LocationService: IDisposable
             return false;
         }
 
-        ConfigureRequestHeaders();
-
-        var streamUri = new Uri(Configuration.Constants.ActiveStreamEndpoint);
         var streamPayload = new
         {
             venue_id = venueId,
@@ -225,10 +209,13 @@ public class LocationService: IDisposable
 
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(streamUri, streamPayload, cancellationToken).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            
-            return true;
+            var result = await _api.SendAsync<object?>(
+                "location.activeStream",
+                body: streamPayload,
+                ct: cancellationToken
+            ).ConfigureAwait(false);
+
+            return result.Success;
         }
         catch (Exception exception)
         {

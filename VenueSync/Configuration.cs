@@ -95,15 +95,6 @@ public class Configuration : IPluginConfiguration, ISavable
         public const int SOCKET_PORT = 443;
         public const string SOCKET_SCHEME = "https";
 #endif
-        
-        public const string SOCKET_CHANNEL_AUTH = $"{API_ENDPOINT}/broadcasting/auth";
-        public const string SOCKET_USER_AUTH = $"{API_ENDPOINT}/broadcasting/user-auth";
-        public const string XIVAuthEndpoint = $"{API_ENDPOINT}/auth/xivauth/register";
-        public const string LocationEndpoint = $"{API_ENDPOINT}/location/send";
-        public const string HouseVerifyEndpoint = $"{API_ENDPOINT}/location/verify";
-        public const string MeEndpoint = $"{API_ENDPOINT}/me";
-        public const string MannequinEndpoint = $"{API_ENDPOINT}/mannequin/update";
-        public const string ActiveStreamEndpoint = $"{API_ENDPOINT}/location/active-stream";
 
     }
 }

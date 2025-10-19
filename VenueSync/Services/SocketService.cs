@@ -131,12 +131,11 @@ public class SocketService: IDisposable
     
     private Pusher CreatePusher()
     {
+        var apiEndpoint = Configuration.Constants.API_ENDPOINT;
         var pusher = new Pusher(Configuration.Constants.SOCKET_APP_KEY, new PusherOptions
         {
-            UserAuthenticator = new VenueSyncHttpUserAuthenticator(
-                Configuration.Constants.SOCKET_USER_AUTH, _configuration),
-            Authorizer = new VenueSyncHttpAuthenticator(
-                Configuration.Constants.SOCKET_CHANNEL_AUTH, _configuration),
+            UserAuthenticator = new VenueSyncHttpUserAuthenticator($"{apiEndpoint}/broadcasting/user-auth", _configuration),
+            Authorizer = new VenueSyncHttpAuthenticator($"{apiEndpoint}/broadcasting/auth", _configuration),
             Host = $"{Configuration.Constants.SOCKET_HOST}:{Configuration.Constants.SOCKET_PORT}",
             Encrypted = Configuration.Constants.SOCKET_SCHEME == "https",
             ClientTimeout = TimeSpan.FromSeconds(20),
