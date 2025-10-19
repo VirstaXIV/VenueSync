@@ -2,7 +2,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -82,7 +85,13 @@ public class SyncFileService : IDisposable
     
     public SyncFileService(Configuration configuration)
     {
-        _httpClient = new HttpClient();
+        var handler = new HttpClientHandler
+        {
+            AllowAutoRedirect = false,
+            MaxAutomaticRedirections = 10,
+            AutomaticDecompression = System.Net.DecompressionMethods.All
+        };
+        _httpClient = new HttpClient(handler, disposeHandler: true);
         _configuration = configuration;
         LoadAccessTimes();
     }
@@ -147,6 +156,76 @@ public class SyncFileService : IDisposable
     }
     
     #endregion
+
+    // HTTP request header helpers for file downloads
+    private static void SetUserAgent(HttpRequestHeaders headers)
+    {
+        var ver = Assembly.GetExecutingAssembly().GetName().Version;
+        headers.UserAgent.Add(new ProductInfoHeaderValue("VenueSync", $"{ver!.Major}.{ver.Minor}.{ver.Build}"));
+    }
+
+    private void ConfigureDownloadHeaders(HttpRequestMessage request, bool attachAuth = true)
+    {
+        // Accept any content type (primarily binary payloads for files)
+        request.Headers.Accept.Clear();
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
+
+        // Attach auth token if available and desired for this request
+        if (attachAuth && !string.IsNullOrWhiteSpace(_configuration.ServerToken))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _configuration.ServerToken);
+        }
+
+        SetUserAgent(request.Headers);
+    }
+
+    // Explicitly follow redirects while preserving headers/auth
+    private async Task<HttpResponseMessage> SendFollowingRedirectsAsync(HttpRequestMessage initialRequest, CancellationToken cancellationToken)
+    {
+        const int maxRedirects = 10;
+        var currentRequest = initialRequest;
+        var redirectCount = 0;
+
+        while (true)
+        {
+            var response = await _httpClient.SendAsync(currentRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+
+            if (response.StatusCode is HttpStatusCode.Moved           // 301
+                or HttpStatusCode.Redirect                             // 302
+                or HttpStatusCode.RedirectMethod                       // 303
+                or HttpStatusCode.TemporaryRedirect                    // 307
+                or HttpStatusCode.PermanentRedirect)                   // 308
+            {
+                if (redirectCount++ >= maxRedirects)
+                {
+                    response.Dispose();
+                    throw new HttpRequestException($"Too many redirects while requesting {initialRequest.RequestUri}");
+                }
+
+                var location = response.Headers.Location;
+                if (location == null)
+                {
+                    // No location provided, return the response to let caller handle it
+                    return response;
+                }
+
+                var nextUri = location.IsAbsoluteUri
+                    ? location
+                    : new Uri(currentRequest.RequestUri!, location);
+
+                VenueSync.Log.Debug($"Redirect {redirectCount}: {currentRequest.RequestUri} -> {nextUri}");
+                response.Dispose();
+
+                // Use GET for subsequent requests (safe for 301/302/303; 307/308 keep method but we are already using GET)
+                var nextRequest = new HttpRequestMessage(HttpMethod.Get, nextUri);
+                ConfigureDownloadHeaders(nextRequest, attachAuth: false);
+                currentRequest = nextRequest;
+                continue;
+            }
+
+            return response;
+        }
+    }
 
     #region File Download
     
@@ -235,9 +314,17 @@ public class SyncFileService : IDisposable
             
             VenueSync.Log.Debug($"Downloading mod {id} from: {file}");
             
-            using var response = await _httpClient.GetAsync(file, HttpCompletionOption.ResponseHeadersRead, 
-                                                            progress.CancellationToken.Token);
+            using var request = new HttpRequestMessage(HttpMethod.Get, file);
+            ConfigureDownloadHeaders(request);
+
+            using var response = await SendFollowingRedirectsAsync(request, progress.CancellationToken.Token);
             response.EnsureSuccessStatusCode();
+
+            var contentType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant();
+            if (contentType != null && contentType.Contains("text/html"))
+            {
+                throw new HttpRequestException($"Unexpected content type '{contentType}' for {file}. The URL may be a redirect or landing page.");
+            }
 
             long fileSize = response.Content.Headers.ContentLength ?? 0;
             progress.TotalBytes = fileSize;
@@ -269,6 +356,11 @@ public class SyncFileService : IDisposable
                 }
             }
             
+            if (totalRead == 0)
+            {
+                throw new InvalidOperationException($"No data was downloaded from {file}. The URL may be a redirect or invalid.");
+            }
+
             await fileStream.FlushAsync(progress.CancellationToken.Token);
 
             UpdateFileAccessTime(localPath);
