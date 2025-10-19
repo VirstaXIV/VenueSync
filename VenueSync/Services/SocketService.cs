@@ -59,6 +59,7 @@ public class SocketService: IDisposable
     private readonly VenueEntered _venueEntered;
     private readonly VenueExited _venueExited;
     private readonly VenueUpdated _venueUpdated;
+    private readonly VenueMod _venueMod;
     private readonly ServiceConnected _serviceConnected;
     private readonly ServiceDisconnected _serviceDisconnected;
     private readonly LoggedIn _loggedIn;
@@ -84,7 +85,8 @@ public class SocketService: IDisposable
         LoggedIn loggedIn, 
         LoggedOut loggedOut,
         VenueUpdated venueUpdated, 
-        VenueExited venueExited)
+        VenueExited venueExited,
+        VenueMod venueMod)
     {
         _configuration = configuration;
         _stateService = stateService;
@@ -94,6 +96,7 @@ public class SocketService: IDisposable
         _venueEntered = venueEntered;
         _venueUpdated = venueUpdated;
         _venueExited = venueExited;
+        _venueMod = venueMod;
         _loggedIn = loggedIn;
         _loggedOut = loggedOut;
 
@@ -223,6 +226,9 @@ public class SocketService: IDisposable
         
         channel.Unbind("venue.entered", OnVenueEnteredEvent);
         channel.Bind("venue.entered", OnVenueEnteredEvent);
+        
+        channel.Unbind("venue.mod", OnVenueModEvent);
+        channel.Bind("venue.mod", OnVenueModEvent);
     }
 
     private void BindVenueChannelEvents(Channel channel)
@@ -231,6 +237,9 @@ public class SocketService: IDisposable
         
         channel.Unbind("venue.updated", OnVenueUpdatedEvent);
         channel.Bind("venue.updated", OnVenueUpdatedEvent);
+        
+        channel.Unbind("venue.mod", OnVenueModEvent);
+        channel.Bind("venue.mod", OnVenueModEvent);
     }
 
     private void OnVenueEnteredEvent(PusherEvent eventData)
@@ -242,10 +251,29 @@ public class SocketService: IDisposable
             var enteredData = JsonConvert.DeserializeObject<VenueEnteredData>(eventData.Data);
             if (enteredData != null)
             {
-                VenueSync.Log.Debug($"Processing venue.entered for venue ID: {enteredData.venue.id}");
+                VenueSync.Log.Debug($"Processing venue.entered for Location ID: {enteredData.location.id}");
                 _venueEntered.Invoke(enteredData);
                 _ = Task.Run(async () => 
-                    await AddChannelAsync($"presence-venue.{enteredData.venue.id}").ConfigureAwait(false));
+                    await AddChannelAsync($"presence-venue.{enteredData.location.id}").ConfigureAwait(false));
+            }
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Error($"Error processing venue.entered event: {ex.Message}");
+        }
+    }
+    
+    private void OnVenueModEvent(PusherEvent eventData)
+    {
+        VenueSync.Log.Debug($"Received event: venue.mod (Channel: {eventData.ChannelName})");
+
+        try
+        {
+            var modData = JsonConvert.DeserializeObject<VenueModData>(eventData.Data);
+            if (modData != null)
+            {
+                VenueSync.Log.Debug($"Processing venue.mod for Location ID: {modData.location_id}");
+                _venueMod.Invoke(modData);
             }
         }
         catch (Exception ex)

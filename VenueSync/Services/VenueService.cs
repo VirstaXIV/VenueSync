@@ -61,6 +61,7 @@ public class VenueService : IDisposable
         VenueEntered venueEntered,
         VenueUpdated venueUpdated,
         VenueExited venueExited,
+        VenueMod venueMod,
         LoggedOut loggedOut,
         ReloadMods reloadMods,
         DisableMods disableMods,
@@ -93,8 +94,8 @@ public class VenueService : IDisposable
         reloadMods.Subscribe(ReloadAllMods, ReloadMods.Priority.High);
         disableMods.Subscribe(DisposeMods, DisableMods.Priority.High);
         serviceDisconnected.Subscribe(OnServiceDisconnected, ServiceDisconnected.Priority.High);
+        venueMod.Subscribe(OnVenueMod, VenueMod.Priority.High);
         
-        // Monitor download completion to trigger reload
         Task.Run(MonitorDownloadsAsync);
     }
 
@@ -370,8 +371,13 @@ public class VenueService : IDisposable
 
     private void OnVenueEntered(VenueEnteredData data)
     {
+        DisposeMannequins();
+        _failedMods.Clear();
+        _stateService.VenueState.failed_mods.Clear();
+
         UpdateVenueState(data.venue, data.location, data.staff, data.tags, data.streams);
-        
+        _stateService.VenueState.location.mods.Clear();
+
         _syncFileService.MaybeDownloadFile(
             data.venue.id, 
             data.venue.logo, 
@@ -383,21 +389,51 @@ public class VenueService : IDisposable
                 await LoadLogoTextureAsync(path);
             })
         );
-        
+
         VenueSync.Messager.NotificationMessage($"Welcome to [{data.venue.name}]", NotificationType.Success);
 
         if (!_windowSystem.VenueWindowOpened())
         {
             _windowSystem.ToggleVenueWindow();
         }
+    }
+
+    private void OnVenueMod(VenueModData data)
+    {
+        if (_stateService.VenueState.id != data.venue_id || _stateService.VenueState.location.id != data.location_id)
+        {
+            return;
+        }
+
+        var mods = _stateService.VenueState.location.mods;
+
+        var existingIndex = mods.FindIndex(m => string.Equals(m.id, data.mod.id, StringComparison.OrdinalIgnoreCase));
+        if (existingIndex >= 0)
+        {
+            mods[existingIndex] = data.mod;
+            VenueSync.Log.Debug($"Updated mod {data.mod.name} ({data.mod.id}) for location {data.location_id}");
+        }
+        else
+        {
+            mods.Add(data.mod);
+            VenueSync.Log.Debug($"Added mod {data.mod.name} ({data.mod.id}) for location {data.location_id}");
+        }
+
+        _failedMods.Remove(data.mod.id);
+        _stateService.VenueState.failed_mods.Remove(data.mod.id);
 
         ReloadAllMods();
     }
 
     private void OnVenueUpdated(VenueUpdatedData data)
     {
+        var preservedMods = new List<MannequinModItem>(_stateService.VenueState.location.mods);
+
+        _failedMods.Clear();
+        _stateService.VenueState.failed_mods.Clear();
+
         UpdateVenueState(data.venue, data.location, data.staff, data.tags, data.streams);
-        
+
         _syncFileService.MaybeDownloadFile(
             data.venue.id, 
             data.venue.logo, 
@@ -409,8 +445,9 @@ public class VenueService : IDisposable
                 await LoadLogoTextureAsync(path);
             })
         );
-        
-        ReloadAllMods();
+
+        _stateService.VenueState.location.mods.Clear();
+        _stateService.VenueState.location.mods.AddRange(preservedMods);
     }
 
     private void UpdateVenueState(VenueData venue, VenueLocation location, List<VenueStaff> staff, List<string> tags, List<VenueStream> streams)

@@ -35,13 +35,12 @@ public record MannequinModItem
 {
     public string id { get; init; } = "";
     public string name { get; set; } = "";
-    public string description { get; set; } = "";
     public string version { get; init; } = "";
     public string file { get; init; } = "";
     public string hash { get; init; } = "";
     public string mannequin_id { get; init; } = "";
     public string extension { get; init; } = "";
-    public List<MannequinModFileItem> files { get; init; } = [];
+    public List<MannequinModFileItem> files { get; set; } = [];
 }
 
 public record VenueLocation
@@ -57,7 +56,7 @@ public record VenueLocation
     public string world { get; set; } = "";
     public string data_center { get; set; } = "";
     public List<MannequinItem> mannequins { get; init; } = [];
-    public List<MannequinModItem> mods { get; init; } = [];
+    public List<MannequinModItem> mods { get; set; } = [];
 }
 
 public record VenueStream

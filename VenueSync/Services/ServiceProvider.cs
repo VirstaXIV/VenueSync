@@ -95,6 +95,7 @@ public static class ServiceProvider
                    .AddSingleton<DiceRoll>()
                    .AddSingleton<VenueEntered>()
                    .AddSingleton<VenueUpdated>()
+                   .AddSingleton<VenueMod>()
                    .AddSingleton<VenueExited>();
     
     private static ServiceManager AddInterop(this ServiceManager services)
