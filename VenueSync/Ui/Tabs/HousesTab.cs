@@ -5,6 +5,7 @@ using OtterGui.Text;
 using OtterGui.Widgets;
 using VenueSync.Services;
 using VenueSync.State;
+using VenueSync.Ui.Crud;
 
 namespace VenueSync.Ui.Tabs;
 

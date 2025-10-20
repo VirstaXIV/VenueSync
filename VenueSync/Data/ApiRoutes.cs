@@ -29,6 +29,9 @@ public static class ApiRoutes
         { "venues.update", new ApiRoute("venues.update", HttpMethod.Post, "/venues/{venue}", true) },
         { "venues.logo", new ApiRoute("venues.logo", HttpMethod.Post, "/venues/{venue}/logo", true) },
         { "venues.destroy", new ApiRoute("venues.destroy", HttpMethod.Delete, "/venues/{venue}", true) },
+        { "venues.staff.store", new ApiRoute("venues.staff.store", HttpMethod.Post, "/venues/{venue}/members", true) },
+        { "venues.staff.update", new ApiRoute("venues.staff.update", HttpMethod.Post, "/venues/{venue}/members/{staff}", true) },
+        { "venues.staff.destroy", new ApiRoute("venues.staff.destroy", HttpMethod.Delete, "/venues/{venue}/members/{staff}", true) },
         
         // Mannequin
         { "mannequin.update", new ApiRoute("mannequin.update", HttpMethod.Post, "/mannequin/update", true) },

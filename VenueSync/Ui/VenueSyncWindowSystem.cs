@@ -1,6 +1,8 @@
 ﻿using System;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
+using VenueSync.Ui.Crud;
+using VenueSync.Ui.Crud.Venue;
 
 namespace VenueSync.Ui;
 
@@ -11,6 +13,7 @@ public class VenueSyncWindowSystem: IDisposable
     private readonly MainWindow _mainWindow;
     private readonly VenueWindow _venueWindow;
     private readonly ManageVenueWindow _manageVenueWindow;
+    private readonly ManageStaffWindow _manageStaffWindow;
 
     public VenueSyncWindowSystem(
         IUiBuilder uiBuilder,
@@ -18,18 +21,21 @@ public class VenueSyncWindowSystem: IDisposable
         VenueWindow venueWindow,
         HouseVerifyWindow houseVerifyWindow,
         ManageMannequinsWindow mannequinsWindow,
-        ManageVenueWindow manageVenueWindow)
+        ManageVenueWindow manageVenueWindow,
+        ManageStaffWindow manageStaffWindow)
     {
         _uiBuilder = uiBuilder;
         _mainWindow = mainWindow;
         _venueWindow = venueWindow;
         _manageVenueWindow = manageVenueWindow;
+        _manageStaffWindow = manageStaffWindow;
 
         _windowSystem.AddWindow(mainWindow);
         _windowSystem.AddWindow(venueWindow);
         _windowSystem.AddWindow(houseVerifyWindow);
         _windowSystem.AddWindow(mannequinsWindow);
         _windowSystem.AddWindow(manageVenueWindow);
+        _windowSystem.AddWindow(manageStaffWindow);
         
         _uiBuilder.OpenMainUi += _mainWindow.Toggle;
         _uiBuilder.Draw += _windowSystem.Draw;

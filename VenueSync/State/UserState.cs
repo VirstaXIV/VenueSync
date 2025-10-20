@@ -8,6 +8,15 @@ public record UserHouseMannequinItem
     public string name { get; init; } = "";
 }
 
+public record UserVenueStaffItem
+{
+    public string id { get; set; } = "";
+    public string lodestone_id { get; set; } = "";
+    public string name { get; set; } = "";
+    public string position { get; set; } = "";
+    public bool granted { get; set; } = false;
+}
+
 public record UserVenueItem
 {
     public string id { get; set; } = "";
@@ -16,7 +25,11 @@ public record UserVenueItem
     public string carrd_url { get; init; } = "";
     public string description { get; init; } = "";
     public string logo { get; init; } = "";
+    public string hash { get; init; } = "";
     public List<string> tags { get; set; } = new();
+    public List<UserVenueStaffItem> staff { get; set; } = [];
+    public List<VenueStream> streams { get; set; } = [];
+    public List<VenueLocation> locations { get; set; } = [];
 }
 
 public record UserHouseItem

@@ -48,7 +48,7 @@ public class VenueApi : IDisposable
     }
 
     // POST /venues/{venue}/logo
-    public Task<ApiResult<object>> UploadLogoAsync(
+    public Task<ApiResult<UserVenueItem>> UploadLogoAsync(
         string venueId,
         Stream logoStream,
         string fileName,
@@ -60,7 +60,7 @@ public class VenueApi : IDisposable
         fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         multipart.Add(fileContent, "logo", fileName);
 
-        return _api.SendAsync<object>(
+        return _api.SendAsync<UserVenueItem>(
             "venues.logo",
             body: multipart,
             routeParams: new Dictionary<string, string> { { "venue", venueId } },

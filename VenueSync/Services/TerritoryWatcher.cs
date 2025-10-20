@@ -10,6 +10,7 @@ using VenueSync.Events;
 using VenueSync.Services.Api;
 using VenueSync.State;
 using VenueSync.Ui;
+using VenueSync.Ui.Crud;
 
 namespace VenueSync.Services;
 

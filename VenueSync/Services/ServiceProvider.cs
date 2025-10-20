@@ -14,10 +14,13 @@ using Penumbra.GameData.Interop;
 using VenueSync.Data;
 using VenueSync.Events;
 using VenueSync.Services.Api;
+using VenueSync.Services.Api.Venue;
 using VenueSync.Services.IPC;
 using VenueSync.Ui;
 using VenueSync.Ui.Tabs;
 using VenueSync.Ui.Widgets;
+using VenueSync.Ui.Crud;
+using VenueSync.Ui.Crud.Venue;
 
 namespace VenueSync.Services;
 
@@ -121,6 +124,7 @@ public static class ServiceProvider
                    .AddSingleton<MannequinApi>()
                    .AddSingleton<CharacterApi>()
                    .AddSingleton<VenueApi>()
+                   .AddSingleton<StaffApi>()
                    .AddSingleton<TerritoryWatcher>()
                    .AddSingleton<VenueService>();
 
@@ -140,6 +144,7 @@ public static class ServiceProvider
                    .AddSingleton<HouseVerifyWindow>()
                    .AddSingleton<ManageMannequinsWindowPosition>()
                    .AddSingleton<ManageMannequinsWindow>()
+                   .AddSingleton<ManageStaffWindow>()
                    .AddSingleton<ManageVenueWindow>()
                    .AddSingleton<VenueSyncWindowSystem>();
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -9,11 +10,10 @@ using OtterGui.Services;
 using Penumbra.GameData.Enums;
 using Penumbra.GameData.Interop;
 using VenueSync.Services;
-using VenueSync.State;
-using System.Collections.Generic;
 using VenueSync.Services.Api;
+using VenueSync.State;
 
-namespace VenueSync.Ui;
+namespace VenueSync.Ui.Crud;
 
 public class ManageMannequinsWindowPosition : IService
 {

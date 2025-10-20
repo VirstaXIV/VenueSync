@@ -166,11 +166,9 @@ public class SyncFileService : IDisposable
 
     private void ConfigureDownloadHeaders(HttpRequestMessage request, bool attachAuth = true)
     {
-        // Accept any content type (primarily binary payloads for files)
         request.Headers.Accept.Clear();
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
 
-        // Attach auth token if available and desired for this request
         if (attachAuth && !string.IsNullOrWhiteSpace(_configuration.ServerToken))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _configuration.ServerToken);
@@ -179,7 +177,6 @@ public class SyncFileService : IDisposable
         SetUserAgent(request.Headers);
     }
 
-    // Explicitly follow redirects while preserving headers/auth
     private async Task<HttpResponseMessage> SendFollowingRedirectsAsync(HttpRequestMessage initialRequest, CancellationToken cancellationToken)
     {
         const int maxRedirects = 10;
@@ -205,7 +202,6 @@ public class SyncFileService : IDisposable
                 var location = response.Headers.Location;
                 if (location == null)
                 {
-                    // No location provided, return the response to let caller handle it
                     return response;
                 }
 
@@ -216,7 +212,6 @@ public class SyncFileService : IDisposable
                 VenueSync.Log.Debug($"Redirect {redirectCount}: {currentRequest.RequestUri} -> {nextUri}");
                 response.Dispose();
 
-                // Use GET for subsequent requests (safe for 301/302/303; 307/308 keep method but we are already using GET)
                 var nextRequest = new HttpRequestMessage(HttpMethod.Get, nextUri);
                 ConfigureDownloadHeaders(nextRequest, attachAuth: false);
                 currentRequest = nextRequest;
@@ -256,10 +251,9 @@ public class SyncFileService : IDisposable
             var completedFiles = 0;
             var hasFailure = false;
             
-            // Track this mod's downloads
             pendingDownloads[modId] = true;
             
-            VenueSync.Log.Debug($"Downloading {fileCount} files for mod: {mod.name}");
+            VenueSync.Log.Debug($"Downloading {fileCount} files for: {mod.name}");
             
             void CheckModCompletion(bool success)
             {
@@ -304,7 +298,6 @@ public class SyncFileService : IDisposable
         {
             await _downloadSemaphore.WaitAsync(progress.CancellationToken.Token);
             
-            // Check if we need to free up space before downloading
             if (_configuration.AutoCleanupEnabled)
             {
                 await EnsureStorageSpace();
@@ -312,7 +305,7 @@ public class SyncFileService : IDisposable
             
             Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
             
-            VenueSync.Log.Debug($"Downloading mod {id} from: {file}");
+            VenueSync.Log.Debug($"Downloading {id} from: {file}");
             
             using var request = new HttpRequestMessage(HttpMethod.Get, file);
             ConfigureDownloadHeaders(request);

@@ -1,14 +1,19 @@
 using System;
 using System.Numerics;
+using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.ImGuiNotification;
+using OtterGui.Classes;
 using OtterGui.Text;
 using OtterGui.Widgets;
 using VenueSync.Services;
+using VenueSync.Services.Api;
 using VenueSync.State;
+using VenueSync.Ui.Crud;
 
 namespace VenueSync.Ui.Tabs;
 
-public class VenuesTab(StateService stateService, ManageVenueWindow manageVenueWindow) : ITab
+public class VenuesTab(StateService stateService, ManageVenueWindow manageVenueWindow, VenueApi venueApi, AccountApi accountApi) : ITab
 {
     public ReadOnlySpan<byte> Label => "Venues"u8;
 
@@ -18,7 +23,6 @@ public class VenuesTab(StateService stateService, ManageVenueWindow manageVenueW
         if (!child)
             return;
 
-        // Create Venue button
         if (ImUtf8.Button("Create Venue"))
         {
             manageVenueWindow.OpenForCreate();
@@ -67,6 +71,34 @@ public class VenuesTab(StateService stateService, ManageVenueWindow manageVenueW
                     {
                         manageVenueWindow.OpenForEdit(venue);
                     }
+
+                    ImGui.SameLine();
+                    var deleteLabel = $"Delete##{venue.id}";
+                    if (ImGui.Button(deleteLabel))
+                    {
+                        ImGui.OpenPopup($"Confirm Delete##{venue.id}");
+                    }
+
+                    var popupId = $"Confirm Delete##{venue.id}";
+                    if (ImGui.BeginPopupModal(popupId, ImGuiWindowFlags.AlwaysAutoResize))
+                    {
+                        ImGui.TextUnformatted("Are you sure you want to delete this venue? This action cannot be undone.");
+                        ImGui.Separator();
+
+                        if (ImGui.Button("Delete"))
+                        {
+                            _ = DeleteVenueAsync(venue.id);
+                            ImGui.CloseCurrentPopup();
+                        }
+
+                        ImGui.SameLine();
+                        if (ImGui.Button("Cancel"))
+                        {
+                            ImGui.CloseCurrentPopup();
+                        }
+
+                        ImGui.EndPopup();
+                    }
                 }
             }
             else
@@ -80,4 +112,34 @@ public class VenuesTab(StateService stateService, ManageVenueWindow manageVenueW
         }
     }
         
+    private async Task DeleteVenueAsync(string venueId)
+    {
+        try
+        {
+            var result = await venueApi.DestroyAsync(venueId).ConfigureAwait(false);
+            if (result.Success)
+            {
+                var user = await accountApi.User().ConfigureAwait(false);
+                if (user.Success)
+                {
+                    VenueSync.Messager.NotificationMessage("Venue deleted successfully", NotificationType.Success);
+                }
+                else
+                {
+                    VenueSync.Messager.NotificationMessage("Venue deleted, but failed to refresh user data", NotificationType.Warning);
+                }
+            }
+            else
+            {
+                VenueSync.Messager.NotificationMessage("Venue delete failed", NotificationType.Error);
+                VenueSync.Log.Warning($"Venue delete failed: {result.ErrorMessage ?? "Unknown error"}");
+            }
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Messager.NotificationMessage("Venue delete failed", NotificationType.Error);
+            VenueSync.Log.Warning($"Venue delete exception: {ex.Message}");
+        }
+    }
+
 }

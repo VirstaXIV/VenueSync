@@ -10,7 +10,7 @@ using OtterGui.Services;
 using VenueSync.Services;
 using VenueSync.Services.Api;
 
-namespace VenueSync.Ui;
+namespace VenueSync.Ui.Crud;
 
 public class HouseVerifyWindowPosition : IService
 {
