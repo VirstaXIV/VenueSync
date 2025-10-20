@@ -9,15 +9,15 @@ using OtterGui.Classes;
 using VenueSync.Data.DTO.Account;
 using VenueSync.State;
 
-namespace VenueSync.Services;
+namespace VenueSync.Services.Api;
 
-public class AccountService: IDisposable
+public class AccountApi: IDisposable
 {
     private readonly Configuration _configuration;
     private readonly StateService _stateService;
     private readonly ApiService _api;
 
-    public AccountService(Configuration configuration, StateService stateService)
+    public AccountApi(Configuration configuration, StateService stateService)
     {
         _configuration = configuration;
         _stateService = stateService;

@@ -7,6 +7,7 @@ using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using VenueSync.Data;
 using VenueSync.Events;
+using VenueSync.Services.Api;
 using VenueSync.State;
 using VenueSync.Ui;
 
@@ -16,7 +17,7 @@ public class TerritoryWatcher: IDisposable
 {
     private readonly StateService _stateService;
     private readonly IObjectTable _objectTable;
-    private readonly LocationService _locationService;
+    private readonly LocationApi _locationApi;
     private readonly HouseVerifyWindow _houseVerifyWindow;
     private readonly ChatService _chatService;
     private readonly Configuration _configuration;
@@ -34,7 +35,7 @@ public class TerritoryWatcher: IDisposable
     public TerritoryWatcher(
         StateService stateService,
         IObjectTable objectTable,
-        LocationService locationService,
+        LocationApi locationApi,
         HouseVerifyWindow houseVerifyWindow,
         ChatService chatService,
         Configuration configuration,
@@ -46,7 +47,7 @@ public class TerritoryWatcher: IDisposable
     {
         _stateService = stateService;
         _objectTable = objectTable;
-        _locationService = locationService;
+        _locationApi = locationApi;
         _houseVerifyWindow = houseVerifyWindow;
         _chatService = chatService;
         _configuration = configuration;
@@ -275,7 +276,7 @@ public class TerritoryWatcher: IDisposable
         {
             if (_stateService.Connection.Connected)
             {
-                var reply = await _locationService.SendLocation(_stateService.CurrentHouse);
+                var reply = await _locationApi.SendLocation(_stateService.CurrentHouse);
                 if (reply is { Success: false, Graceful: false })
                 {
                     VenueSync.Log.Warning("Failed to query location.");

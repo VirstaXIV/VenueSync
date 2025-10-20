@@ -11,6 +11,8 @@ using Newtonsoft.Json;
 using OtterGui.Classes;
 using PusherClient;
 using VenueSync.Events;
+using VenueSync.Services.Api;
+using VenueSync.State;
 
 namespace VenueSync.Services;
 
@@ -54,7 +56,7 @@ public class SocketService: IDisposable
 {
     private readonly Configuration _configuration;
     private readonly StateService _stateService;
-    private readonly AccountService _accountService;
+    private readonly AccountApi _accountApi;
     
     private readonly VenueEntered _venueEntered;
     private readonly VenueExited _venueExited;
@@ -78,7 +80,7 @@ public class SocketService: IDisposable
     public SocketService(
         Configuration configuration,
         StateService stateService, 
-        AccountService accountService,
+        AccountApi accountApi,
         ServiceConnected serviceConnected, 
         ServiceDisconnected serviceDisconnected, 
         VenueEntered venueEntered, 
@@ -90,7 +92,7 @@ public class SocketService: IDisposable
     {
         _configuration = configuration;
         _stateService = stateService;
-        _accountService = accountService;
+        _accountApi = accountApi;
         _serviceConnected = serviceConnected;
         _serviceDisconnected = serviceDisconnected;
         _venueEntered = venueEntered;
@@ -228,6 +230,9 @@ public class SocketService: IDisposable
         
         channel.Unbind("venue.mod", OnVenueModEvent);
         channel.Bind("venue.mod", OnVenueModEvent);
+
+        channel.Unbind("character.synced", OnCharacterVerifyEvent);
+        channel.Bind("character.synced", OnCharacterVerifyEvent);
     }
 
     private void BindVenueChannelEvents(Channel channel)
@@ -262,6 +267,43 @@ public class SocketService: IDisposable
         }
     }
     
+    private void OnCharacterVerifyEvent(PusherEvent eventData)
+    {
+        VenueSync.Log.Debug($"Received event: character.verify (Channel: {eventData.ChannelName})");
+
+        try
+        {
+            var character = JsonConvert.DeserializeObject<UserCharacterItem>(eventData.Data);
+            if (character != null)
+            {
+                var state = _stateService.UserState;
+                if (state?.characters == null)
+                {
+                    VenueSync.Log.Warning("User state not initialized; cannot update characters.");
+                    return;
+                }
+
+                var idx = state.characters.FindIndex(c => string.Equals(c.id, character.id, StringComparison.OrdinalIgnoreCase));
+                if (idx >= 0)
+                {
+                    state.characters[idx] = character;
+                    VenueSync.Log.Debug($"Updated character in state: {character.id}");
+                    VenueSync.Messager.NotificationMessage($"Character verified: {character.name}", NotificationType.Success);
+                }
+                else
+                {
+                    state.characters.Add(character);
+                    VenueSync.Log.Debug($"Added character to state: {character.id}");
+                    VenueSync.Messager.NotificationMessage($"Character verified: {character.name}", NotificationType.Success);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Error($"Error processing character.verify event: {ex.Message}");
+        }
+    }
+
     private void OnVenueModEvent(PusherEvent eventData)
     {
         VenueSync.Log.Debug($"Received event: venue.mod (Channel: {eventData.ChannelName})");
@@ -391,7 +433,7 @@ public class SocketService: IDisposable
             try
             {
                 VenueSync.Log.Debug("Verifying user credentials...");
-                var userCheck = await _accountService.User().ConfigureAwait(false);
+                var userCheck = await _accountApi.User().ConfigureAwait(false);
                 
                 if (!userCheck.Success)
                 {

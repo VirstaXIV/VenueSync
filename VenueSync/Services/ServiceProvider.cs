@@ -13,6 +13,7 @@ using Penumbra.GameData.DataContainers;
 using Penumbra.GameData.Interop;
 using VenueSync.Data;
 using VenueSync.Events;
+using VenueSync.Services.Api;
 using VenueSync.Services.IPC;
 using VenueSync.Ui;
 using VenueSync.Ui.Tabs;
@@ -114,10 +115,11 @@ public static class ServiceProvider
 
     private static ServiceManager AddApi(this ServiceManager services)
         => services.AddSingleton<GameStateService>()
-                   .AddSingleton<AccountService>()
+                   .AddSingleton<AccountApi>()
                    .AddSingleton<SocketService>()
-                   .AddSingleton<LocationService>()
-                   .AddSingleton<MannequinService>()
+                   .AddSingleton<LocationApi>()
+                   .AddSingleton<MannequinApi>()
+                   .AddSingleton<CharacterApi>()
                    .AddSingleton<TerritoryWatcher>()
                    .AddSingleton<VenueService>();
 

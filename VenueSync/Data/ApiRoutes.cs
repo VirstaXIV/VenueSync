@@ -21,6 +21,9 @@ public static class ApiRoutes
         { "location.verify", new ApiRoute("location.verify", HttpMethod.Post, "/location/verify", true) },
         { "location.activeStream", new ApiRoute("location.activeStream", HttpMethod.Post, "/location/active-stream", true) },
 
+        // Characters
+        { "characters.verify", new ApiRoute("characters.verify", HttpMethod.Post, "/characters/verify", true) },
+
         // Mannequin
         { "mannequin.update", new ApiRoute("mannequin.update", HttpMethod.Post, "/mannequin/update", true) },
     };

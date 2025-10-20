@@ -5,7 +5,6 @@ namespace VenueSync.Services;
 
 public class StateService: IDisposable
 {
-    
     public required Connection Connection { get; set; }
     public required UserState UserState { get; set; }
     public required PlayerState PlayerState { get; set; }

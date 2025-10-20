@@ -16,11 +16,12 @@ using OtterGui.Classes;
 using OtterGui.Text;
 using OtterGui.Widgets;
 using VenueSync.Services;
+using VenueSync.Services.Api;
 
 namespace VenueSync.Ui.Tabs;
 
 public class SettingsTab(Configuration configuration, StateService stateService, SyncFileService syncFileService,
-    AccountService accountService, SocketService socketService, FileDialogManager fileDialogManager, IPCManager ipcManager): ITab
+    AccountApi accountApi, SocketService socketService, FileDialogManager fileDialogManager, IPCManager ipcManager): ITab
 {
     private bool _currentlyRegistering = false;
     private bool _registered = false;
@@ -427,7 +428,7 @@ public class SettingsTab(Configuration configuration, StateService stateService,
         {
             try
             {
-                var reply = await accountService.XIVAuth(CancellationToken.None).ConfigureAwait(false);
+                var reply = await accountApi.XIVAuth(CancellationToken.None).ConfigureAwait(false);
                 if (!reply.Success)
                 {
                     VenueSync.Log.Warning($"Registration Failed: {reply.ErrorMessage}");
@@ -444,6 +445,11 @@ public class SettingsTab(Configuration configuration, StateService stateService,
                 configuration.ServerToken = _token;
                 configuration.ServerUserID = _userId;
                 configuration.SaveNow();
+
+                if (configuration.AutoConnect && !stateService.Connection.Connected)
+                {
+                    HandleConnect();
+                }
             }
             catch (Exception ex)
             {

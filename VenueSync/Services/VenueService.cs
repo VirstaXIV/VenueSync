@@ -41,7 +41,6 @@ public class VenueService : IDisposable
     private readonly DeleteTemporaryCollection _penumbraRemoveTemporaryCollection;
     private readonly RedrawObject _penumbraRedrawObject;
     
-    // Map a mannequinId -> collection Guid
     private Dictionary<string, Guid> _collectionIds = [];
     private HashSet<string> _failedMods = [];
     private bool _hasQueuedReload;

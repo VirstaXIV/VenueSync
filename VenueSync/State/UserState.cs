@@ -34,6 +34,7 @@ public record UserHouseItem
 
 public record UserCharacterItem
 {
+    public string id { get; set; } = "";
     public string name { get; init; } = "";
     public int main { get; init; } = 0;
     public string lodestone_id { get; init; } = "";

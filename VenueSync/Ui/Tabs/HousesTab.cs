@@ -22,6 +22,16 @@ public class HousesTab(StateService stateService, HouseVerifyWindow houseVerifyW
         if (!child)
             return;
         
+        DrawActionButtons();
+
+        using (ImUtf8.Child("HousesChild"u8, default))
+        {
+            DrawHousesTable();
+        }
+    }
+
+    private void DrawActionButtons()
+    {
         if (ImUtf8.Button("Start House Verification"))
         {
             houseVerifyWindow.Toggle();
@@ -33,22 +43,22 @@ public class HousesTab(StateService stateService, HouseVerifyWindow houseVerifyW
             manageMannequinsWindow.Toggle();
         }
         ImGui.EndDisabled();
+
         if (!_isInOwnedHouse)
         {
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {
                 ImGui.BeginTooltip();
-                ImGui.PushTextWrapPos(ImGui.GetFontSize() * 35f);
-                ImGui.TextUnformatted($"Must be in an owned or granted house.");
+                ImGui.PushTextWrapPos(ImGui.GetFontSize() * 40f);
+                ImGui.TextUnformatted("Must be in an owned or granted house.");
                 ImGui.PopTextWrapPos();
                 ImGui.EndTooltip();
             }
         }
 
-        using (ImUtf8.Child("HousesChild"u8, default))
-        {
-            DrawHousesTable();
-        }
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
     }
 
     private bool IsInOwnedHouse()

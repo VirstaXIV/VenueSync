@@ -5,14 +5,14 @@ using Dalamud.Utility;
 using VenueSync.Data.DTO.Locations;
 using VenueSync.State;
 
-namespace VenueSync.Services;
+namespace VenueSync.Services.Api;
 
-public class LocationService: IDisposable
+public class LocationApi: IDisposable
 {
     private readonly Configuration _configuration;
     private readonly ApiService _api;
 
-    public LocationService(Configuration configuration)
+    public LocationApi(Configuration configuration)
     {
         _configuration = configuration;
         _api = new ApiService(configuration);

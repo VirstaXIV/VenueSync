@@ -11,6 +11,7 @@ using Penumbra.GameData.Interop;
 using VenueSync.Services;
 using VenueSync.State;
 using System.Collections.Generic;
+using VenueSync.Services.Api;
 
 namespace VenueSync.Ui;
 
@@ -24,7 +25,7 @@ public class ManageMannequinsWindowPosition : IService
 public class ManageMannequinsWindow : Window, IDisposable
 {
     private readonly StateService _stateService;
-    private readonly MannequinService _mannequinService;
+    private readonly MannequinApi _mannequinApi;
     private readonly ManageMannequinsWindowPosition _position;
     private readonly ActorObjectManager _objects;
     
@@ -35,7 +36,7 @@ public class ManageMannequinsWindow : Window, IDisposable
         StateService            stateService,
         ManageMannequinsWindowPosition position,
         ActorObjectManager      objects,
-        MannequinService        mannequinService
+        MannequinApi        mannequinApi
     ) : base("VenueSyncManageMannequinsWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
@@ -45,7 +46,7 @@ public class ManageMannequinsWindow : Window, IDisposable
             MaximumSize = new Vector2(400, 350),
         };
         _stateService     = stateService;
-        _mannequinService = mannequinService;
+        _mannequinApi = mannequinApi;
         _objects          = objects;
         _position         = position;
     }
@@ -148,7 +149,7 @@ public class ManageMannequinsWindow : Window, IDisposable
                 data_center = _stateService.PlayerState.data_center,
             };
 
-            var reply = await _mannequinService.UpdateMannequin(mannequinData);
+            var reply = await _mannequinApi.UpdateMannequin(mannequinData);
             if (reply.Success)
             {
                 VenueSync.Log.Debug("Mannequin updated successfully.");

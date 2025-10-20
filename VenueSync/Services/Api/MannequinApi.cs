@@ -5,14 +5,14 @@ using Dalamud.Utility;
 using VenueSync.Data.DTO.Mannequins;
 using VenueSync.State;
 
-namespace VenueSync.Services;
+namespace VenueSync.Services.Api;
 
-public class MannequinService: IDisposable
+public class MannequinApi: IDisposable
 {
     private readonly Configuration _configuration;
     private readonly ApiService _api;
 
-    public MannequinService(Configuration configuration)
+    public MannequinApi(Configuration configuration)
     {
         _configuration = configuration;
         _api = new ApiService(configuration);

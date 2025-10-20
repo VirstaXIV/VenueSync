@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace VenueSync.Data.DTO.Account;
 
 public record XIVAuthRegisterResponse

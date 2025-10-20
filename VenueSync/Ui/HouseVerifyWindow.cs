@@ -8,6 +8,7 @@ using Dalamud.Plugin;
 using OtterGui.Raii;
 using OtterGui.Services;
 using VenueSync.Services;
+using VenueSync.Services.Api;
 
 namespace VenueSync.Ui;
 
@@ -21,8 +22,8 @@ public class HouseVerifyWindowPosition : IService
 public class HouseVerifyWindow : Window, IDisposable
 {
     private readonly StateService              _stateService;
-    private readonly AccountService            _accountService;
-    private readonly LocationService           _locationService;
+    private readonly AccountApi            _accountApi;
+    private readonly LocationApi           _locationApi;
     private readonly HouseVerifyWindowPosition _position;
 
     public long _ownedHouseId   = 0;
@@ -35,8 +36,8 @@ public class HouseVerifyWindow : Window, IDisposable
         IDalamudPluginInterface   pluginInterface,
         StateService              stateService,
         HouseVerifyWindowPosition position,
-        LocationService           locationService,
-        AccountService            accountService
+        LocationApi           locationApi,
+        AccountApi            accountApi
     ) : base("VenueSyncHouseVerifyWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
@@ -46,8 +47,8 @@ public class HouseVerifyWindow : Window, IDisposable
             MaximumSize = new Vector2(400, 350),
         };
         _stateService    = stateService;
-        _accountService  = accountService;
-        _locationService = locationService;
+        _accountApi  = accountApi;
+        _locationApi = locationApi;
         _position        = position;
     }
 
@@ -155,7 +156,7 @@ public class HouseVerifyWindow : Window, IDisposable
     {
         try
         {
-            var reply = await _locationService.VerifyLocation(characterName, lodestoneId, _stateService.CurrentHouse);
+            var reply = await _locationApi.VerifyLocation(characterName, lodestoneId, _stateService.CurrentHouse);
             if (reply is { Success: false, Graceful: false })
             {
                 VenueSync.Log.Warning($"Failed to verify location: {reply.ErrorMessage}");
@@ -166,7 +167,7 @@ public class HouseVerifyWindow : Window, IDisposable
 
             try
             {
-                await _accountService.User();
+                await _accountApi.User();
             }
             catch (Exception ex)
             {

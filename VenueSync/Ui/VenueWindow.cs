@@ -11,6 +11,7 @@ using OtterGui.Services;
 using VenueSync.Data;
 using VenueSync.Events;
 using VenueSync.Services;
+using VenueSync.Services.Api;
 using VenueSync.State;
 using VenueSync.Ui.Widgets;
 
@@ -35,7 +36,7 @@ public class VenueWindow : Window, IDisposable
     private readonly Configuration _configuration;
     private readonly VenueSettings _venueSettings;
     private readonly StateService _stateService;
-    private readonly LocationService _locationService;
+    private readonly LocationApi _locationApi;
     private readonly SyncFileService _syncFileService;
     private readonly GuestListWidget _guestListWidget;
     private readonly StaffListWidget _staffListWidget;
@@ -51,7 +52,7 @@ public class VenueWindow : Window, IDisposable
         GuestListWidget guestListWidget,
         StaffListWidget staffListWidget,
         StateService stateService,
-        LocationService locationService,
+        LocationApi locationApi,
         VenueWindowPosition position,
         ReloadMods reloadMods,
         DisableMods disableMods,
@@ -67,7 +68,7 @@ public class VenueWindow : Window, IDisposable
         _configuration = configuration;
         _venueSettings = venueSettings;
         _stateService = stateService;
-        _locationService = locationService;
+        _locationApi = locationApi;
         _syncFileService = syncFileService;
         _guestListWidget = guestListWidget;
         _staffListWidget = staffListWidget;
@@ -580,6 +581,6 @@ public class VenueWindow : Window, IDisposable
     {
         VenueSync.Log.Information($"Stream selected: {streamId}");
 
-        _ = Task.Run(async () => await _locationService.SendActiveStream(_stateService.VenueState.id, _stateService.VenueState.location.id, streamId).ConfigureAwait(false));
+        _ = Task.Run(async () => await _locationApi.SendActiveStream(_stateService.VenueState.id, _stateService.VenueState.location.id, streamId).ConfigureAwait(false));
     }
 }
