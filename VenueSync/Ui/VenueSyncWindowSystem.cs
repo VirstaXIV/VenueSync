@@ -22,7 +22,9 @@ public class VenueSyncWindowSystem: IDisposable
         HouseVerifyWindow houseVerifyWindow,
         ManageMannequinsWindow mannequinsWindow,
         ManageVenueWindow manageVenueWindow,
-        ManageStaffWindow manageStaffWindow)
+        ManageStaffWindow manageStaffWindow,
+        ManageStreamWindow manageStreamWindow,
+        ManageScheduleWindow manageScheduleWindow)
     {
         _uiBuilder = uiBuilder;
         _mainWindow = mainWindow;
@@ -36,6 +38,8 @@ public class VenueSyncWindowSystem: IDisposable
         _windowSystem.AddWindow(mannequinsWindow);
         _windowSystem.AddWindow(manageVenueWindow);
         _windowSystem.AddWindow(manageStaffWindow);
+        _windowSystem.AddWindow(manageStreamWindow);
+        _windowSystem.AddWindow(manageScheduleWindow);
         
         _uiBuilder.OpenMainUi += _mainWindow.Toggle;
         _uiBuilder.Draw += _windowSystem.Draw;

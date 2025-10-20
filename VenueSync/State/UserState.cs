@@ -8,6 +8,22 @@ public record UserHouseMannequinItem
     public string name { get; init; } = "";
 }
 
+public record UserVenueStreamItem
+{
+    public string id { get; set; } = "";
+    public string name { get; set; } = "";
+    public string type { get; set; } = "";
+}
+
+public record UserVenueScheduleItem
+{
+    public string id { get; set; } = "";
+    public int day { get; set; } = 0;
+    public string start_time { get; set; } = "";
+    public string end_time { get; set; } = "";
+    public string timezone { get; set; } = "";
+}
+
 public record UserVenueStaffItem
 {
     public string id { get; set; } = "";
@@ -15,6 +31,13 @@ public record UserVenueStaffItem
     public string name { get; set; } = "";
     public string position { get; set; } = "";
     public bool granted { get; set; } = false;
+}
+
+public record UserVenueLocationItem
+{
+    public string id { get; set; } = "";
+    public string name { get; set; } = "";
+    public List<MannequinModItem> mods { get; set; } = [];
 }
 
 public record UserVenueItem
@@ -28,8 +51,9 @@ public record UserVenueItem
     public string hash { get; init; } = "";
     public List<string> tags { get; set; } = new();
     public List<UserVenueStaffItem> staff { get; set; } = [];
-    public List<VenueStream> streams { get; set; } = [];
-    public List<VenueLocation> locations { get; set; } = [];
+    public List<UserVenueStreamItem> streams { get; set; } = [];
+    public List<UserVenueLocationItem> locations { get; set; } = [];
+    public List<UserVenueScheduleItem> schedules { get; set; } = [];
 }
 
 public record UserHouseItem

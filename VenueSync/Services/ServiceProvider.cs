@@ -125,6 +125,8 @@ public static class ServiceProvider
                    .AddSingleton<CharacterApi>()
                    .AddSingleton<VenueApi>()
                    .AddSingleton<StaffApi>()
+                   .AddSingleton<StreamApi>()
+                   .AddSingleton<ScheduleApi>()
                    .AddSingleton<TerritoryWatcher>()
                    .AddSingleton<VenueService>();
 
@@ -145,6 +147,8 @@ public static class ServiceProvider
                    .AddSingleton<ManageMannequinsWindowPosition>()
                    .AddSingleton<ManageMannequinsWindow>()
                    .AddSingleton<ManageStaffWindow>()
+                   .AddSingleton<ManageStreamWindow>()
+                   .AddSingleton<ManageScheduleWindow>()
                    .AddSingleton<ManageVenueWindow>()
                    .AddSingleton<VenueSyncWindowSystem>();
 }

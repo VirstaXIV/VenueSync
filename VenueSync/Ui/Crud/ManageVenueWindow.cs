@@ -28,7 +28,11 @@ public class ManageVenueWindow : Window, IDisposable
     private readonly ITextureProvider _textureProvider;
     private readonly SyncFileService _syncFileService;
     private readonly ManageStaffWindow _manageStaffWindow;
+    private readonly ManageStreamWindow _manageStreamWindow;
+    private readonly ManageScheduleWindow _manageScheduleWindow;
     private readonly StaffApi _staffApi;
+    private readonly StreamApi _streamApi;
+    private readonly ScheduleApi _scheduleApi;
     private readonly AccountApi _accountApi;
 
     private bool _isEditMode;
@@ -54,7 +58,11 @@ public class ManageVenueWindow : Window, IDisposable
         ITextureProvider textureProvider, 
         SyncFileService syncFileService, 
         ManageStaffWindow manageStaffWindow, 
+        ManageStreamWindow manageStreamWindow, 
+        ManageScheduleWindow manageScheduleWindow, 
         StaffApi staffApi, 
+        StreamApi streamApi,
+        ScheduleApi scheduleApi,
         AccountApi accountApi,
         ServiceDisconnected serviceDisconnected
         ) : base("Manage Venue")
@@ -65,7 +73,11 @@ public class ManageVenueWindow : Window, IDisposable
         _textureProvider = textureProvider;
         _syncFileService = syncFileService;
         _manageStaffWindow = manageStaffWindow;
+        _manageStreamWindow = manageStreamWindow;
+        _manageScheduleWindow = manageScheduleWindow;
         _staffApi = staffApi;
+        _streamApi = streamApi;
+        _scheduleApi = scheduleApi;
         _accountApi = accountApi;
 
         SizeConstraints = new WindowSizeConstraints
@@ -204,14 +216,9 @@ public class ManageVenueWindow : Window, IDisposable
         var venue = _stateService.UserState.venues.FirstOrDefault(v => v.id == _venueId);
         var locations = venue?.locations ?? [];
 
-        if (ImGui.BeginTable("EditVenueLocations", 7))
+        if (ImGui.BeginTable("EditVenueLocations", 2))
         {
             ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("World", ImGuiTableColumnFlags.WidthFixed, 120);
-            ImGui.TableSetupColumn("District", ImGuiTableColumnFlags.WidthFixed, 130);
-            ImGui.TableSetupColumn("Ward", ImGuiTableColumnFlags.WidthFixed, 70);
-            ImGui.TableSetupColumn("Plot", ImGuiTableColumnFlags.WidthFixed, 70);
-            ImGui.TableSetupColumn("Size", ImGuiTableColumnFlags.WidthFixed, 80);
             ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 120);
             ImGui.TableHeadersRow();
 
@@ -222,22 +229,7 @@ public class ManageVenueWindow : Window, IDisposable
                     ImGui.TableNextRow();
 
                     ImGui.TableNextColumn();
-                    ImGui.TextUnformatted(string.IsNullOrEmpty(loc.name) ? (string.IsNullOrEmpty(loc.house_name) ? "—" : loc.house_name) : loc.name);
-
-                    ImGui.TableNextColumn();
-                    ImGui.TextUnformatted(loc.world);
-
-                    ImGui.TableNextColumn();
-                    ImGui.TextUnformatted(loc.district);
-
-                    ImGui.TableNextColumn();
-                    ImGui.TextUnformatted(loc.ward.ToString());
-
-                    ImGui.TableNextColumn();
-                    ImGui.TextUnformatted(loc.plot.ToString());
-
-                    ImGui.TableNextColumn();
-                    ImGui.TextUnformatted(string.IsNullOrEmpty(loc.size) ? "—" : loc.size);
+                    ImGui.TextUnformatted(loc.name);
 
                     ImGui.TableNextColumn();
                     var manageLabel = $"Manage##Location{loc.id}";
@@ -371,29 +363,157 @@ public class ManageVenueWindow : Window, IDisposable
         }
     }
 
+    private async Task DeleteStreamAsync(string streamId)
+    {
+        try
+        {
+            var result = await _streamApi.DestroyAsync(_venueId, streamId).ConfigureAwait(false);
+            if (result.Success)
+            {
+                var user = await _accountApi.User().ConfigureAwait(false);
+                if (user.Success)
+                {
+                    VenueSync.Messager.NotificationMessage("Stream deleted successfully", NotificationType.Success);
+                }
+                else
+                {
+                    VenueSync.Messager.NotificationMessage("Stream deleted, but failed to refresh user data", NotificationType.Warning);
+                }
+            }
+            else
+            {
+                VenueSync.Messager.NotificationMessage("Stream delete failed", NotificationType.Error);
+                VenueSync.Log.Warning($"Stream delete failed: {result.ErrorMessage ?? "Unknown error"}");
+            }
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Messager.NotificationMessage("Stream delete failed", NotificationType.Error);
+            VenueSync.Log.Warning($"Stream delete exception: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteScheduleAsync(string scheduleId)
+    {
+        try
+        {
+            var result = await _scheduleApi.DestroyAsync(_venueId, scheduleId).ConfigureAwait(false);
+            if (result.Success)
+            {
+                var user = await _accountApi.User().ConfigureAwait(false);
+                if (user.Success)
+                {
+                    VenueSync.Messager.NotificationMessage("Schedule deleted successfully", NotificationType.Success);
+                }
+                else
+                {
+                    VenueSync.Messager.NotificationMessage("Schedule deleted, but failed to refresh user data", NotificationType.Warning);
+                }
+            }
+            else
+            {
+                VenueSync.Messager.NotificationMessage("Schedule delete failed", NotificationType.Error);
+                VenueSync.Log.Warning($"Schedule delete failed: {result.ErrorMessage ?? "Unknown error"}");
+            }
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Messager.NotificationMessage("Schedule delete failed", NotificationType.Error);
+            VenueSync.Log.Warning($"Schedule delete exception: {ex.Message}");
+        }
+    }
+
     private void DrawSchedulesTable()
     {
-        if (ImGui.BeginTable("EditVenueSchedules", 3))
+        if (ImGui.Button("Create Schedule"))
         {
-            ImGui.TableSetupColumn("Day");
-            ImGui.TableSetupColumn("Open");
-            ImGui.TableSetupColumn("Close");
+            if (!string.IsNullOrWhiteSpace(_venueId))
+                _manageScheduleWindow.OpenForCreate(_venueId);
+        }
+        ImGui.Spacing();
+
+        var venue = _stateService.UserState.venues.FirstOrDefault(v => v.id == _venueId);
+        var schedules = venue?.schedules ?? [];
+
+        if (ImGui.BeginTable("EditVenueSchedules", 4))
+        {
+            ImGui.TableSetupColumn("Day", ImGuiTableColumnFlags.WidthFixed, 140);
+            ImGui.TableSetupColumn("Open", ImGuiTableColumnFlags.WidthFixed, 120);
+            ImGui.TableSetupColumn("Close", ImGuiTableColumnFlags.WidthFixed, 120);
+            ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 180);
             ImGui.TableHeadersRow();
 
-            // Placeholder - populate when schedule data is available for the venue
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.TextUnformatted("—");
-            ImGui.TableNextColumn();
-            ImGui.TextUnformatted("—");
-            ImGui.TableNextColumn();
-            ImGui.TextUnformatted("—");
+            if (schedules.Count > 0)
+            {
+                foreach (var sc in schedules)
+                {
+                    ImGui.TableNextRow();
+
+                    ImGui.TableNextColumn();
+                    var dayName = sc.day switch
+                    {
+                        0 => "Sunday",
+                        1 => "Monday",
+                        2 => "Tuesday",
+                        3 => "Wednesday",
+                        4 => "Thursday",
+                        5 => "Friday",
+                        6 => "Saturday",
+                        _ => $"Day {sc.day}"
+                    };
+                    ImGui.TextUnformatted(dayName);
+
+                    ImGui.TableNextColumn();
+                    ImGui.TextUnformatted(string.IsNullOrEmpty(sc.start_time) ? "—" : sc.start_time);
+
+                    ImGui.TableNextColumn();
+                    ImGui.TextUnformatted(string.IsNullOrEmpty(sc.end_time) ? "—" : sc.end_time);
+
+                    ImGui.TableNextColumn();
+                    var manageLabel = $"Manage##Schedule{sc.id}";
+                    if (ImGui.Button(manageLabel))
+                    {
+                        if (!string.IsNullOrWhiteSpace(_venueId))
+                            _manageScheduleWindow.OpenForEdit(_venueId, sc);
+                    }
+
+                    ImGui.SameLine();
+                    var deleteLabel = $"Delete##Schedule{sc.id}";
+                    if (ImGui.Button(deleteLabel))
+                    {
+                        ImGui.OpenPopup($"Confirm Schedule Delete##{sc.id}");
+                    }
+
+                    var popupId = $"Confirm Schedule Delete##{sc.id}";
+                    if (ImGui.BeginPopupModal(popupId, ImGuiWindowFlags.AlwaysAutoResize))
+                    {
+                        ImGui.TextUnformatted("Are you sure you want to delete this schedule? This action cannot be undone.");
+                        ImGui.Separator();
+
+                        if (ImGui.Button("Delete"))
+                        {
+                            _ = DeleteScheduleAsync(sc.id);
+                            ImGui.CloseCurrentPopup();
+                        }
+
+                        ImGui.SameLine();
+                        if (ImGui.Button("Cancel"))
+                        {
+                            ImGui.CloseCurrentPopup();
+                        }
+
+                        ImGui.EndPopup();
+                    }
+                }
+            }
+            else
+            {
+                ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                ImGui.TextUnformatted("No schedules");
+            }
 
             ImGui.EndTable();
-        }
-        else
-        {
-            ImGui.TextUnformatted("No schedules available.");
         }
     }
 
@@ -401,7 +521,8 @@ public class ManageVenueWindow : Window, IDisposable
     {
         if (ImGui.Button("Create Stream"))
         {
-            VenueSync.Messager.NotificationMessage("Create Stream - coming soon", NotificationType.Info);
+            if (!string.IsNullOrWhiteSpace(_venueId))
+                _manageStreamWindow.OpenForCreate(_venueId);
         }
         ImGui.Spacing();
 
@@ -412,9 +533,6 @@ public class ManageVenueWindow : Window, IDisposable
         {
             ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupColumn("Type", ImGuiTableColumnFlags.WidthFixed, 120);
-            ImGui.TableSetupColumn("Title", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Live", ImGuiTableColumnFlags.WidthFixed, 60);
-            ImGui.TableSetupColumn("Viewers", ImGuiTableColumnFlags.WidthFixed, 80);
             ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 120);
             ImGui.TableHeadersRow();
 
@@ -431,19 +549,39 @@ public class ManageVenueWindow : Window, IDisposable
                     ImGui.TextUnformatted(st.type);
 
                     ImGui.TableNextColumn();
-                    ImGui.TextUnformatted(string.IsNullOrEmpty(st.title) ? "—" : st.title);
-
-                    ImGui.TableNextColumn();
-                    ImGui.TextUnformatted(st.live ? "Yes" : "No");
-
-                    ImGui.TableNextColumn();
-                    ImGui.TextUnformatted(st.viewers.ToString());
-
-                    ImGui.TableNextColumn();
-                    var manageLabel = $"Manage##Stream{st.name}";
+                    var manageLabel = $"Manage##Stream{st.id}";
                     if (ImGui.Button(manageLabel))
                     {
-                        VenueSync.Messager.NotificationMessage("Manage Stream - coming soon", NotificationType.Info);
+                        if (!string.IsNullOrWhiteSpace(_venueId))
+                            _manageStreamWindow.OpenForEdit(_venueId, st);
+                    }
+
+                    ImGui.SameLine();
+                    var deleteLabel = $"Delete##Stream{st.id}";
+                    if (ImGui.Button(deleteLabel))
+                    {
+                        ImGui.OpenPopup($"Confirm Stream Delete##{st.id}");
+                    }
+
+                    var popupId = $"Confirm Stream Delete##{st.id}";
+                    if (ImGui.BeginPopupModal(popupId, ImGuiWindowFlags.AlwaysAutoResize))
+                    {
+                        ImGui.TextUnformatted("Are you sure you want to delete this stream? This action cannot be undone.");
+                        ImGui.Separator();
+
+                        if (ImGui.Button("Delete"))
+                        {
+                            _ = DeleteStreamAsync(st.id);
+                            ImGui.CloseCurrentPopup();
+                        }
+
+                        ImGui.SameLine();
+                        if (ImGui.Button("Cancel"))
+                        {
+                            ImGui.CloseCurrentPopup();
+                        }
+
+                        ImGui.EndPopup();
                     }
                 }
             }

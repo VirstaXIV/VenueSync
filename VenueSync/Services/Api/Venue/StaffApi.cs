@@ -14,7 +14,6 @@ public sealed class StaffApi
         _api = new ApiService(configuration);
     }
 
-    // POST /venues/{venue}/staff
     public Task<ApiResult<UserVenueStaffItem>> StoreAsync(string venueId, object payload, CancellationToken ct = default)
     {
         return _api.SendAsync<UserVenueStaffItem>(
@@ -25,7 +24,6 @@ public sealed class StaffApi
         );
     }
 
-    // POST /venues/{venue}/staff/{staff}
     public Task<ApiResult<UserVenueStaffItem>> UpdateAsync(string venueId, string staffId, object payload, CancellationToken ct = default)
     {
         return _api.SendAsync<UserVenueStaffItem>(
@@ -40,7 +38,6 @@ public sealed class StaffApi
         );
     }
 
-    // DELETE /venues/{venue}/staff/{staff}
     public Task<ApiResult<UserVenueStaffItem>> DestroyAsync(string venueId, string staffId, CancellationToken ct = default)
     {
         return _api.SendAsync<UserVenueStaffItem>(

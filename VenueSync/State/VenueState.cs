@@ -50,9 +50,6 @@ public record VenueStream
 {
     public string name { get; set; } = "";
     public string type { get; set; } = "";
-    public string title { get; set; } = "";
-    public bool live { get; set; } = false;
-    public int viewers { get; set; } = 0;
 }
 
 public record VenueStaff
