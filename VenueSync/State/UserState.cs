@@ -36,6 +36,7 @@ public record UserVenueStaffItem
 public record UserVenueLocationItem
 {
     public string id { get; set; } = "";
+    public string house_id { get; set; } = "";
     public string name { get; set; } = "";
     public List<MannequinModItem> mods { get; set; } = [];
 }
@@ -58,6 +59,7 @@ public record UserVenueItem
 
 public record UserHouseItem
 {
+    public string id { get; init; } = "";
     public string type { get; init; } = "";
     public string owner { get; init; } = "";
     public string name { get; init; } = "";

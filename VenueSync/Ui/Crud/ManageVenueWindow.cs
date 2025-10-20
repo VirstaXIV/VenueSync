@@ -17,6 +17,7 @@ using VenueSync.Services.Api;
 using VenueSync.Services.Api.Venue;
 using VenueSync.State;
 using VenueSync.Ui.Crud.Venue;
+using LocationApi = VenueSync.Services.Api.Venue.LocationApi;
 
 namespace VenueSync.Ui.Crud;
 
@@ -30,9 +31,11 @@ public class ManageVenueWindow : Window, IDisposable
     private readonly ManageStaffWindow _manageStaffWindow;
     private readonly ManageStreamWindow _manageStreamWindow;
     private readonly ManageScheduleWindow _manageScheduleWindow;
+    private readonly ManageLocationWindow _manageLocationWindow;
     private readonly StaffApi _staffApi;
     private readonly StreamApi _streamApi;
     private readonly ScheduleApi _scheduleApi;
+    private readonly LocationApi _locationApi;
     private readonly AccountApi _accountApi;
 
     private bool _isEditMode;
@@ -60,9 +63,11 @@ public class ManageVenueWindow : Window, IDisposable
         ManageStaffWindow manageStaffWindow, 
         ManageStreamWindow manageStreamWindow, 
         ManageScheduleWindow manageScheduleWindow, 
+        ManageLocationWindow manageLocationWindow,
         StaffApi staffApi, 
         StreamApi streamApi,
         ScheduleApi scheduleApi,
+        LocationApi locationApi,
         AccountApi accountApi,
         ServiceDisconnected serviceDisconnected
         ) : base("Manage Venue")
@@ -75,9 +80,11 @@ public class ManageVenueWindow : Window, IDisposable
         _manageStaffWindow = manageStaffWindow;
         _manageStreamWindow = manageStreamWindow;
         _manageScheduleWindow = manageScheduleWindow;
+        _manageLocationWindow = manageLocationWindow;
         _staffApi = staffApi;
         _streamApi = streamApi;
         _scheduleApi = scheduleApi;
+        _locationApi = locationApi;
         _accountApi = accountApi;
 
         SizeConstraints = new WindowSizeConstraints
@@ -209,17 +216,19 @@ public class ManageVenueWindow : Window, IDisposable
     {
         if (ImGui.Button("Create Location"))
         {
-            VenueSync.Messager.NotificationMessage("Create Location - coming soon", NotificationType.Info);
+            if (!string.IsNullOrWhiteSpace(_venueId))
+                _manageLocationWindow.OpenForCreate(_venueId);
         }
         ImGui.Spacing();
 
         var venue = _stateService.UserState.venues.FirstOrDefault(v => v.id == _venueId);
         var locations = venue?.locations ?? [];
 
-        if (ImGui.BeginTable("EditVenueLocations", 2))
+        if (ImGui.BeginTable("EditVenueLocations", 3))
         {
             ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 120);
+            ImGui.TableSetupColumn("House", ImGuiTableColumnFlags.WidthFixed, 180);
+            ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 180);
             ImGui.TableHeadersRow();
 
             if (locations.Count > 0)
@@ -230,12 +239,44 @@ public class ManageVenueWindow : Window, IDisposable
 
                     ImGui.TableNextColumn();
                     ImGui.TextUnformatted(loc.name);
+                    
+                    ImGui.TableNextColumn();
+                    ImGui.TextUnformatted(loc.house_id);
 
                     ImGui.TableNextColumn();
                     var manageLabel = $"Manage##Location{loc.id}";
                     if (ImGui.Button(manageLabel))
                     {
-                        VenueSync.Messager.NotificationMessage("Manage Location - coming soon", NotificationType.Info);
+                        if (!string.IsNullOrWhiteSpace(_venueId))
+                            _manageLocationWindow.OpenForEdit(_venueId, loc);
+                    }
+
+                    ImGui.SameLine();
+                    var deleteLabel = $"Delete##Location{loc.id}";
+                    if (ImGui.Button(deleteLabel))
+                    {
+                        ImGui.OpenPopup($"Confirm Location Delete##{loc.id}");
+                    }
+
+                    var popupId = $"Confirm Location Delete##{loc.id}";
+                    if (ImGui.BeginPopupModal(popupId, ImGuiWindowFlags.AlwaysAutoResize))
+                    {
+                        ImGui.TextUnformatted("Are you sure you want to delete this location? This action cannot be undone.");
+                        ImGui.Separator();
+
+                        if (ImGui.Button("Delete"))
+                        {
+                            _ = DeleteLocationAsync(loc.id);
+                            ImGui.CloseCurrentPopup();
+                        }
+
+                        ImGui.SameLine();
+                        if (ImGui.Button("Cancel"))
+                        {
+                            ImGui.CloseCurrentPopup();
+                        }
+
+                        ImGui.EndPopup();
                     }
                 }
             }
@@ -420,6 +461,36 @@ public class ManageVenueWindow : Window, IDisposable
         {
             VenueSync.Messager.NotificationMessage("Schedule delete failed", NotificationType.Error);
             VenueSync.Log.Warning($"Schedule delete exception: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteLocationAsync(string locationId)
+    {
+        try
+        {
+            var result = await _locationApi.DestroyAsync(_venueId, locationId).ConfigureAwait(false);
+            if (result.Success)
+            {
+                var user = await _accountApi.User().ConfigureAwait(false);
+                if (user.Success)
+                {
+                    VenueSync.Messager.NotificationMessage("Location deleted successfully", NotificationType.Success);
+                }
+                else
+                {
+                    VenueSync.Messager.NotificationMessage("Location deleted, but failed to refresh user data", NotificationType.Warning);
+                }
+            }
+            else
+            {
+                VenueSync.Messager.NotificationMessage("Location delete failed", NotificationType.Error);
+                VenueSync.Log.Warning($"Location delete failed: {result.ErrorMessage ?? "Unknown error"}");
+            }
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Messager.NotificationMessage("Location delete failed", NotificationType.Error);
+            VenueSync.Log.Warning($"Location delete exception: {ex.Message}");
         }
     }
 

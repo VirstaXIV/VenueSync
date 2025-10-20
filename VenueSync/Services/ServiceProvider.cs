@@ -21,6 +21,8 @@ using VenueSync.Ui.Tabs;
 using VenueSync.Ui.Widgets;
 using VenueSync.Ui.Crud;
 using VenueSync.Ui.Crud.Venue;
+using LocationApi = VenueSync.Services.Api.Venue.LocationApi;
+using LocationsApi = VenueSync.Services.Api.LocationApi;
 
 namespace VenueSync.Services;
 
@@ -120,12 +122,13 @@ public static class ServiceProvider
         => services.AddSingleton<GameStateService>()
                    .AddSingleton<AccountApi>()
                    .AddSingleton<SocketService>()
-                   .AddSingleton<LocationApi>()
+                   .AddSingleton<LocationsApi>()
                    .AddSingleton<MannequinApi>()
                    .AddSingleton<CharacterApi>()
                    .AddSingleton<VenueApi>()
                    .AddSingleton<StaffApi>()
                    .AddSingleton<StreamApi>()
+                   .AddSingleton<LocationApi>()
                    .AddSingleton<ScheduleApi>()
                    .AddSingleton<TerritoryWatcher>()
                    .AddSingleton<VenueService>();
@@ -147,6 +150,7 @@ public static class ServiceProvider
                    .AddSingleton<ManageMannequinsWindowPosition>()
                    .AddSingleton<ManageMannequinsWindow>()
                    .AddSingleton<ManageStaffWindow>()
+                   .AddSingleton<ManageLocationWindow>()
                    .AddSingleton<ManageStreamWindow>()
                    .AddSingleton<ManageScheduleWindow>()
                    .AddSingleton<ManageVenueWindow>()

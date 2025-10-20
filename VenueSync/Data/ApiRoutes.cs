@@ -30,6 +30,11 @@ public static class ApiRoutes
         { "venues.logo", new ApiRoute("venues.logo", HttpMethod.Post, "/venues/{venue}/logo", true) },
         { "venues.destroy", new ApiRoute("venues.destroy", HttpMethod.Delete, "/venues/{venue}", true) },
         
+        // Streams
+        { "venues.locations.store", new ApiRoute("venues.locations.store", HttpMethod.Post, "/venues/{venue}/locations", true) },
+        { "venues.locations.update", new ApiRoute("venues.locations.update", HttpMethod.Post, "/venues/{venue}/locations/{location}", true) },
+        { "venues.locations.destroy", new ApiRoute("venues.locations.destroy", HttpMethod.Delete, "/venues/{venue}/locations/{location}", true) },
+        
         // Staff
         { "venues.staff.store", new ApiRoute("venues.staff.store", HttpMethod.Post, "/venues/{venue}/members", true) },
         { "venues.staff.update", new ApiRoute("venues.staff.update", HttpMethod.Post, "/venues/{venue}/members/{staff}", true) },
