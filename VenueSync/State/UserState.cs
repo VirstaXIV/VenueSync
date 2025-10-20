@@ -13,7 +13,10 @@ public record UserVenueItem
     public string id { get; set; } = "";
     public string name { get; init; } = "";
     public string discord_invite { get; init; } = "";
+    public string carrd_url { get; init; } = "";
+    public string description { get; init; } = "";
     public string logo { get; init; } = "";
+    public List<string> tags { get; set; } = new();
 }
 
 public record UserHouseItem

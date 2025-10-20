@@ -24,6 +24,12 @@ public static class ApiRoutes
         // Characters
         { "characters.verify", new ApiRoute("characters.verify", HttpMethod.Post, "/characters/verify", true) },
 
+        // Venues
+        { "venues.store", new ApiRoute("venues.store", HttpMethod.Post, "/venues", true) },
+        { "venues.update", new ApiRoute("venues.update", HttpMethod.Post, "/venues/{venue}", true) },
+        { "venues.logo", new ApiRoute("venues.logo", HttpMethod.Post, "/venues/{venue}/logo", true) },
+        { "venues.destroy", new ApiRoute("venues.destroy", HttpMethod.Delete, "/venues/{venue}", true) },
+        
         // Mannequin
         { "mannequin.update", new ApiRoute("mannequin.update", HttpMethod.Post, "/mannequin/update", true) },
     };

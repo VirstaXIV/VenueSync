@@ -252,7 +252,7 @@ public class SocketService: IDisposable
 
         try
         {
-            var enteredData = JsonConvert.DeserializeObject<VenueEnteredData>(eventData.Data);
+            var enteredData = JsonConvert.DeserializeObject<VenueState>(eventData.Data);
             if (enteredData != null)
             {
                 VenueSync.Log.Debug($"Processing venue.entered for Location ID: {enteredData.location.id}");
@@ -329,7 +329,7 @@ public class SocketService: IDisposable
 
         try
         {
-            var updatedData = JsonConvert.DeserializeObject<VenueUpdatedData>(eventData.Data);
+            var updatedData = JsonConvert.DeserializeObject<VenueState>(eventData.Data);
             if (updatedData != null)
             {
                 _venueUpdated.Invoke(updatedData);

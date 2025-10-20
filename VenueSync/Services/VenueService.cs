@@ -368,20 +368,20 @@ public class VenueService : IDisposable
         }
     }
 
-    private void OnVenueEntered(VenueEnteredData data)
+    private void OnVenueEntered(VenueState data)
     {
         DisposeMannequins();
         _failedMods.Clear();
         _stateService.VenueState.failed_mods.Clear();
 
-        UpdateVenueState(data.venue, data.location, data.staff, data.tags, data.streams);
+        UpdateVenueState(data);
         _stateService.VenueState.location.mods.Clear();
 
         _syncFileService.MaybeDownloadFile(
-            data.venue.id, 
-            data.venue.logo, 
+            data.id, 
+            data.logo, 
             "png", 
-            data.venue.hash, 
+            data.hash, 
             path => _ = Task.Run(async () =>
             {
                 if (path == null) return; 
@@ -389,7 +389,7 @@ public class VenueService : IDisposable
             })
         );
 
-        VenueSync.Messager.NotificationMessage($"Welcome to [{data.venue.name}]", NotificationType.Success);
+        VenueSync.Messager.NotificationMessage($"Welcome to [{data.name}]", NotificationType.Success);
 
         if (!_windowSystem.VenueWindowOpened())
         {
@@ -424,20 +424,20 @@ public class VenueService : IDisposable
         ReloadAllMods();
     }
 
-    private void OnVenueUpdated(VenueUpdatedData data)
+    private void OnVenueUpdated(VenueState data)
     {
         var preservedMods = new List<MannequinModItem>(_stateService.VenueState.location.mods);
 
         _failedMods.Clear();
         _stateService.VenueState.failed_mods.Clear();
 
-        UpdateVenueState(data.venue, data.location, data.staff, data.tags, data.streams);
+        UpdateVenueState(data);
 
         _syncFileService.MaybeDownloadFile(
-            data.venue.id, 
-            data.venue.logo, 
+            data.id, 
+            data.logo, 
             "png", 
-            data.venue.hash, 
+            data.hash, 
             path => _ = Task.Run(async () =>
             {
                 if (path == null) return; 
@@ -449,20 +449,20 @@ public class VenueService : IDisposable
         _stateService.VenueState.location.mods.AddRange(preservedMods);
     }
 
-    private void UpdateVenueState(VenueData venue, VenueLocation location, List<VenueStaff> staff, List<string> tags, List<VenueStream> streams)
+    private void UpdateVenueState(VenueState venue)
     {
         _stateService.VenueState.id = venue.id;
         _stateService.VenueState.name = venue.name;
-        _stateService.VenueState.location = location;
+        _stateService.VenueState.location = venue.location;
         _stateService.VenueState.logo = venue.logo;
         _stateService.VenueState.hash = venue.hash;
         _stateService.VenueState.description = venue.description;
         _stateService.VenueState.open_hours = venue.open_hours;
         _stateService.VenueState.discord_invite = venue.discord_invite;
         _stateService.VenueState.carrd_url = venue.carrd_url;
-        _stateService.VenueState.staff = staff;
-        _stateService.VenueState.tags = tags;
-        _stateService.VenueState.streams = streams;
+        _stateService.VenueState.staff = venue.staff;
+        _stateService.VenueState.tags = venue.tags;
+        _stateService.VenueState.streams = venue.streams;
         _stateService.VenueState.active_stream = venue.active_stream;
         
         _venueSettings.Load();

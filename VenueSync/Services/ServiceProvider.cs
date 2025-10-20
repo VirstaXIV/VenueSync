@@ -120,6 +120,7 @@ public static class ServiceProvider
                    .AddSingleton<LocationApi>()
                    .AddSingleton<MannequinApi>()
                    .AddSingleton<CharacterApi>()
+                   .AddSingleton<VenueApi>()
                    .AddSingleton<TerritoryWatcher>()
                    .AddSingleton<VenueService>();
 
@@ -139,5 +140,6 @@ public static class ServiceProvider
                    .AddSingleton<HouseVerifyWindow>()
                    .AddSingleton<ManageMannequinsWindowPosition>()
                    .AddSingleton<ManageMannequinsWindow>()
+                   .AddSingleton<ManageVenueWindow>()
                    .AddSingleton<VenueSyncWindowSystem>();
 }

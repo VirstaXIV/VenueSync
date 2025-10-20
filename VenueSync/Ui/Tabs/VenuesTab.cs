@@ -8,7 +8,7 @@ using VenueSync.State;
 
 namespace VenueSync.Ui.Tabs;
 
-public class VenuesTab(StateService stateService): ITab
+public class VenuesTab(StateService stateService, ManageVenueWindow manageVenueWindow) : ITab
 {
     public ReadOnlySpan<byte> Label => "Venues"u8;
 
@@ -18,12 +18,22 @@ public class VenuesTab(StateService stateService): ITab
         if (!child)
             return;
 
+        // Create Venue button
+        if (ImUtf8.Button("Create Venue"))
+        {
+            manageVenueWindow.OpenForCreate();
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
         using (ImUtf8.Child("VenuesChild"u8, default))
         {
             DrawVenuesTable();
         }
     }
-    
+
     private Vector4 GetVenueColor(UserVenueItem venue)
     {
         if (venue.id == stateService.VenueState.id)
@@ -31,31 +41,39 @@ public class VenuesTab(StateService stateService): ITab
             return new Vector4(0, 1, 0, 1);
         }
 
-        return new Vector4(1,1,1,1);
+        return new Vector4(1, 1, 1, 1);
     }
 
     private void DrawVenuesTable()
     {
-        if (ImGui.BeginTable("Venues", 1))
+        if (ImGui.BeginTable("Venues", 2))
         {
-            ImGui.TableSetupColumn("Name");
+            ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 120);
             ImGui.TableHeadersRow();
-            
+
             if (stateService.HasVenues())
             {
                 foreach (var venue in stateService.UserState.venues)
                 {
                     var color = GetVenueColor(venue);
-                    
+
                     ImGui.TableNextColumn();
                     ImGui.TextColored(color, venue.name);
+
+                    ImGui.TableNextColumn();
+                    var manageLabel = $"Manage##{venue.id}";
+                    if (ImGui.Button(manageLabel))
+                    {
+                        manageVenueWindow.OpenForEdit(venue);
+                    }
                 }
             }
             else
             {
                 ImGui.TableNextRow();
                 ImGui.TableSetColumnIndex(0);
-                ImGui.TextColored(new Vector4(1,1,1,1), "No Venues");
+                ImGui.TextColored(new Vector4(1, 1, 1, 1), "No Venues");
             }
             
             ImGui.EndTable();

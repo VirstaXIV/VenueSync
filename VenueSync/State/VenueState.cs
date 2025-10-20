@@ -3,19 +3,6 @@ using Dalamud.Interface.Textures.TextureWraps;
 
 namespace VenueSync.State;
 
-public record VenueData
-{
-    public string id { get; set; } = "";
-    public string name { get; set; } = "";
-    public string logo { get; set; } = "";
-    public string hash { get; set; } = "";
-    public string description { get; set; } = "";
-    public string open_hours { get; set; } = "";
-    public string discord_invite { get; set; } = "";
-    public string carrd_url { get; set; } = "";
-    public string active_stream { get; set; } = "";
-}
-
 public record MannequinItem
 {
     public string id { get; set; } = "";

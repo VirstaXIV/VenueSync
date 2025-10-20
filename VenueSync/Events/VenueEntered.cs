@@ -1,20 +1,9 @@
-﻿using System.Collections.Generic;
-using OtterGui.Classes;
-using VenueSync.Services;
+﻿using OtterGui.Classes;
 using VenueSync.State;
 
 namespace VenueSync.Events;
 
-public class VenueEnteredData
-{
-    public required VenueData venue { get; set; }
-    public required VenueLocation location { get; set; }
-    public List<VenueStaff> staff { get; set; } = [];
-    public List<VenueStream> streams { get; set; } = [];
-    public List<string> tags { get; set; } = [];
-}
-
-public sealed class VenueEntered(): EventWrapper<VenueEnteredData, VenueEntered.Priority>(nameof(VenueEntered))
+public sealed class VenueEntered(): EventWrapper<VenueState, VenueEntered.Priority>(nameof(VenueEntered))
 {
     public enum Priority
     {

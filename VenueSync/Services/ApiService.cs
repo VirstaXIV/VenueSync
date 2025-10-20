@@ -109,7 +109,14 @@ public sealed class ApiService : IDisposable
 
         if (body is not null && route.Method != HttpMethod.Get && route.Method != HttpMethod.Head)
         {
-            request.Content = JsonContent.Create(body);
+            if (body is HttpContent httpContent)
+            {
+                request.Content = httpContent;
+            }
+            else
+            {
+                request.Content = JsonContent.Create(body);
+            }
         }
 
         ApplyCommonHeaders(request, route.RequiresAuth);
