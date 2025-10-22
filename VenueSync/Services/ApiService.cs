@@ -201,6 +201,22 @@ public sealed class ApiService : IDisposable
         }
     }
 
+    public async Task<ApiResult<TResponse>> SendMultipartAsync<TResponse>(
+        string routeKey,
+        MultipartFormDataContent multipartContent,
+        IReadOnlyDictionary<string, string>? routeParams = null,
+        IReadOnlyDictionary<string, string>? queryParams = null,
+        CancellationToken ct = default)
+    {
+        return await SendAsync<TResponse>(
+            routeKey,
+            body: multipartContent,
+            routeParams: routeParams,
+            queryParams: queryParams,
+            ct: ct
+        ).ConfigureAwait(false);
+    }
+
     public async Task<ApiResult<TResponse>> GetAbsoluteAsync<TResponse>(
         Uri uri,
         bool requiresAuth,

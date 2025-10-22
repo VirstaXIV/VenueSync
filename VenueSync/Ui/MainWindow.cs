@@ -34,6 +34,7 @@ public class MainWindow : Window, IDisposable
     private readonly Configuration _configuration;
     private readonly StateService _stateService;
     private readonly VenueWindow _venueWindow;
+    private readonly ModManagerWindow _modManagerWindow;
     private readonly TabSelected _event;
     private readonly TerritoryChanged _territoryChanged;
     private readonly MainWindowPosition _position;
@@ -53,6 +54,7 @@ public class MainWindow : Window, IDisposable
         StateService stateService,
         SettingsTab settings,
         VenueWindow venueWindow,
+        ModManagerWindow modManagerWindow,
         VenuesTab venueTab,
         CharactersTab charactersTab,
         HousesTab housesTab,
@@ -71,6 +73,7 @@ public class MainWindow : Window, IDisposable
         _configuration = configuration;
         _stateService = stateService;
         _venueWindow = venueWindow;
+        _modManagerWindow = modManagerWindow;
         _event = @event;
         _territoryChanged = territoryChanged;
         _position = position;
@@ -158,6 +161,16 @@ public class MainWindow : Window, IDisposable
             _stateService.ResetHouseState();
             _stateService.ResetVenueState();
             _territoryChanged.Invoke();
+        }
+
+        if (IsClientMode())
+            return;
+        
+        ImGui.SameLine();
+
+        if (ImGui.Button("Open Mod Management"))
+        {
+            _modManagerWindow.Toggle();
         }
     }
 

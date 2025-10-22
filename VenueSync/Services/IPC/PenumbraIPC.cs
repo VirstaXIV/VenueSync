@@ -9,6 +9,7 @@ namespace VenueSync.Services.IPC;
 public class PenumbraIPC: IDisposable
 {
     private string? _penumbraModDirectory;
+    private string? _penumbraExportDirectory;
     private Func<int, int>? _checkCutsceneParent;
 
     public bool IsAvailable { get; private set; } = false;
@@ -19,6 +20,7 @@ public class PenumbraIPC: IDisposable
     private readonly EventSubscriber _penumbraDispose;
     private readonly EventSubscriber _penumbraInit;
     private readonly GetModDirectory _penumbraResolveModDir;
+    private readonly GetModDirectory _penumbraResolveExportDir; //placeholder since there is no method for the export dir yet
     private readonly GetEnabledState _penumbraEnabled;
     
     private CancellationTokenSource _disposalRedrawCts = new();
@@ -35,6 +37,18 @@ public class PenumbraIPC: IDisposable
         }
     }
     
+    public string? ExportDirectory
+    {
+        get => _penumbraExportDirectory;
+        private set
+        {
+            if (!string.Equals(_penumbraExportDirectory, value, StringComparison.Ordinal))
+            {
+                _penumbraExportDirectory = value;
+            }
+        }
+    }
+    
     private readonly bool _pluginLoaded;
     private readonly Version _pluginVersion;
     
@@ -43,6 +57,7 @@ public class PenumbraIPC: IDisposable
         _penumbraInit = Initialized.Subscriber(pluginInterface, PenumbraInit);
         _penumbraDispose = Disposed.Subscriber(pluginInterface, PenumbraDispose);
         _penumbraResolveModDir = new GetModDirectory(pluginInterface);
+        _penumbraResolveExportDir = new GetModDirectory(pluginInterface);
         _penumbraEnabled = new GetEnabledState(pluginInterface);
         _pluginInterface = pluginInterface;
         
@@ -57,6 +72,11 @@ public class PenumbraIPC: IDisposable
     public void CheckModDirectory()
     {
         ModDirectory = !IsAvailable ? string.Empty : _penumbraResolveModDir!.Invoke().ToLowerInvariant();
+    }
+    
+    public void CheckExportDirectory()
+    {
+        ExportDirectory = !IsAvailable ? string.Empty : _penumbraResolveExportDir!.Invoke().ToLowerInvariant();
     }
 
     public void PenumbraInit()
@@ -90,6 +110,7 @@ public class PenumbraIPC: IDisposable
             }
 
             CheckModDirectory();
+            CheckExportDirectory();
             _checkCutsceneParent = new GetCutsceneParentIndexFunc(_pluginInterface).Invoke();
 
         }

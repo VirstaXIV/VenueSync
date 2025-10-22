@@ -38,7 +38,16 @@ public record UserVenueLocationItem
     public string id { get; set; } = "";
     public string house_id { get; set; } = "";
     public string name { get; set; } = "";
-    public List<MannequinModItem> mods { get; set; } = [];
+    public List<UserVenueLocationModItem> mods { get; set; } = [];
+}
+
+
+public record UserVenueLocationModItem
+{
+    public string mod_id { get; set; } = "";
+    public string mannequin_id { get; set; } = "";
+    public string name { get; set; } = "";
+    public bool enabled { get; set; } = false;
 }
 
 public record UserVenueItem

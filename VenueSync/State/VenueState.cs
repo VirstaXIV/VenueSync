@@ -76,4 +76,5 @@ public record VenueState
     public List<VenueStaff> staff { get; set; } = [];
     public List<VenueStream> streams { get; set; } = [];
     public HashSet<string> failed_mods { get; set; } = [];
+    public bool mods_preview_active { get; set; } = false;
 }

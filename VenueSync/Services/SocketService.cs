@@ -52,12 +52,12 @@ class VenueSyncHttpAuthenticator : HttpAuthorizer
     }
 }
 
-public class SocketService: IDisposable
+public class SocketService : IDisposable
 {
     private readonly Configuration _configuration;
     private readonly StateService _stateService;
     private readonly AccountApi _accountApi;
-    
+
     private readonly VenueEntered _venueEntered;
     private readonly VenueExited _venueExited;
     private readonly VenueUpdated _venueUpdated;
@@ -66,12 +66,12 @@ public class SocketService: IDisposable
     private readonly ServiceDisconnected _serviceDisconnected;
     private readonly LoggedIn _loggedIn;
     private readonly LoggedOut _loggedOut;
-    
+
     private Pusher? _pusher;
     private readonly Dictionary<string, Channel> _channels = new();
     private readonly SemaphoreSlim _connectionLock = new(1, 1);
     private readonly SemaphoreSlim _channelLock = new(1, 1);
-    
+
     private bool _shouldAutoConnect;
     private bool _isManualDisconnect;
     private bool _isDisposed;
@@ -79,14 +79,14 @@ public class SocketService: IDisposable
 
     public SocketService(
         Configuration configuration,
-        StateService stateService, 
+        StateService stateService,
         AccountApi accountApi,
-        ServiceConnected serviceConnected, 
-        ServiceDisconnected serviceDisconnected, 
-        VenueEntered venueEntered, 
-        LoggedIn loggedIn, 
+        ServiceConnected serviceConnected,
+        ServiceDisconnected serviceDisconnected,
+        VenueEntered venueEntered,
+        LoggedIn loggedIn,
         LoggedOut loggedOut,
-        VenueUpdated venueUpdated, 
+        VenueUpdated venueUpdated,
         VenueExited venueExited,
         VenueMod venueMod)
     {
@@ -115,7 +115,7 @@ public class SocketService: IDisposable
 
         VenueSync.Log.Debug("Running auto connect on login");
         _shouldAutoConnect = false;
-        
+
         _ = Task.Run(async () => await ConnectAsync().ConfigureAwait(false));
     }
 
@@ -130,12 +130,11 @@ public class SocketService: IDisposable
         VenueSync.Log.Debug($"Leaving venue channel: {id}");
         _ = Task.Run(async () => await RemoveChannelAsync($"presence-venue.{id}").ConfigureAwait(false));
     }
-    
+
     private Pusher CreatePusher()
     {
         var apiEndpoint = Configuration.Constants.API_ENDPOINT;
-        var pusher = new Pusher(Configuration.Constants.SOCKET_APP_KEY, new PusherOptions
-        {
+        var pusher = new Pusher(Configuration.Constants.SOCKET_APP_KEY, new PusherOptions {
             UserAuthenticator = new VenueSyncHttpUserAuthenticator($"{apiEndpoint}/broadcasting/user-auth", _configuration),
             Authorizer = new VenueSyncHttpAuthenticator($"{apiEndpoint}/broadcasting/auth", _configuration),
             Host = $"{Configuration.Constants.SOCKET_HOST}:{Configuration.Constants.SOCKET_PORT}",
@@ -148,7 +147,7 @@ public class SocketService: IDisposable
 
         return pusher;
     }
-    
+
     private void OnPusherError(object? sender, PusherException error)
     {
         switch (error)
@@ -170,7 +169,7 @@ public class SocketService: IDisposable
                 break;
         }
     }
-    
+
     private async Task AddChannelAsync(string channelName)
     {
         if (_isDisposed)
@@ -197,7 +196,7 @@ public class SocketService: IDisposable
 
             VenueSync.Log.Debug($"Subscribing to channel: {channelName}");
             var channel = await pusher.SubscribeAsync(channelName).ConfigureAwait(false);
-            
+
             if (channelName.StartsWith("private-user."))
             {
                 BindUserChannelEvents(channel);
@@ -206,9 +205,9 @@ public class SocketService: IDisposable
             {
                 BindVenueChannelEvents(channel);
             }
-            
+
             _channels[channelName] = channel;
-        
+
             VenueSync.Log.Debug($"Successfully subscribed to channel: {channelName}");
         }
         catch (Exception ex)
@@ -224,10 +223,10 @@ public class SocketService: IDisposable
     private void BindUserChannelEvents(Channel channel)
     {
         VenueSync.Log.Debug($"Binding user channel events to {channel.Name}");
-        
+
         channel.Unbind("venue.entered", OnVenueEnteredEvent);
         channel.Bind("venue.entered", OnVenueEnteredEvent);
-        
+
         channel.Unbind("venue.mod", OnVenueModEvent);
         channel.Bind("venue.mod", OnVenueModEvent);
 
@@ -238,10 +237,10 @@ public class SocketService: IDisposable
     private void BindVenueChannelEvents(Channel channel)
     {
         VenueSync.Log.Debug($"Binding venue channel events to {channel.Name}");
-        
+
         channel.Unbind("venue.updated", OnVenueUpdatedEvent);
         channel.Bind("venue.updated", OnVenueUpdatedEvent);
-        
+
         channel.Unbind("venue.mod", OnVenueModEvent);
         channel.Bind("venue.mod", OnVenueModEvent);
     }
@@ -257,8 +256,8 @@ public class SocketService: IDisposable
             {
                 VenueSync.Log.Debug($"Processing venue.entered for Location ID: {enteredData.location.id}");
                 _venueEntered.Invoke(enteredData);
-                _ = Task.Run(async () => 
-                    await AddChannelAsync($"presence-venue.{enteredData.location.id}").ConfigureAwait(false));
+                _ = Task.Run(async () =>
+                                 await AddChannelAsync($"presence-venue.{enteredData.location.id}").ConfigureAwait(false));
             }
         }
         catch (Exception ex)
@@ -266,7 +265,7 @@ public class SocketService: IDisposable
             VenueSync.Log.Error($"Error processing venue.entered event: {ex.Message}");
         }
     }
-    
+
     private void OnCharacterVerifyEvent(PusherEvent eventData)
     {
         VenueSync.Log.Debug($"Received event: character.verify (Channel: {eventData.ChannelName})");
@@ -277,7 +276,7 @@ public class SocketService: IDisposable
             if (character != null)
             {
                 var state = _stateService.UserState;
-                if (state?.characters == null)
+                if (!_stateService.HasCharacters())
                 {
                     VenueSync.Log.Warning("User state not initialized; cannot update characters.");
                     return;
@@ -340,7 +339,7 @@ public class SocketService: IDisposable
             VenueSync.Log.Error($"Error processing venue.updated event: {ex.Message}");
         }
     }
-    
+
     private async Task RemoveChannelAsync(string channelName)
     {
         var pusher = _pusher;
@@ -375,6 +374,7 @@ public class SocketService: IDisposable
             _channelLock.Release();
         }
     }
+
     private void OnConnectionStateChanged(object? sender, ConnectionState state)
     {
         var isConnected = state == ConnectionState.Connected;
@@ -397,7 +397,7 @@ public class SocketService: IDisposable
             }
         }
     }
-    
+
     public async Task ConnectAsync()
     {
         if (_isDisposed)
@@ -434,7 +434,7 @@ public class SocketService: IDisposable
             {
                 VenueSync.Log.Debug("Verifying user credentials...");
                 var userCheck = await _accountApi.User().ConfigureAwait(false);
-                
+
                 if (!userCheck.Success)
                 {
                     if (!userCheck.Graceful)
@@ -479,14 +479,14 @@ public class SocketService: IDisposable
             _connectionLock.Release();
         }
     }
-    
+
     public async Task DisconnectAsync(bool manual = false)
     {
         await _connectionLock.WaitAsync().ConfigureAwait(false);
         try
         {
             _isManualDisconnect = manual;
-            
+
             _reconnectCts?.Cancel();
             _reconnectCts?.Dispose();
             _reconnectCts = null;
@@ -517,7 +517,7 @@ public class SocketService: IDisposable
             _connectionLock.Release();
         }
     }
-    
+
     private async Task CleanupConnectionAsync()
     {
         var pusher = _pusher;
@@ -587,7 +587,7 @@ public class SocketService: IDisposable
             _channelLock.Release();
         }
     }
-    
+
     private async Task StartReconnectAsync()
     {
         const int maxAttempts = 5;
@@ -596,7 +596,7 @@ public class SocketService: IDisposable
         _reconnectCts?.Cancel();
         _reconnectCts?.Dispose();
         _reconnectCts = new CancellationTokenSource();
-        
+
         var cancellationToken = _reconnectCts.Token;
 
         try
@@ -635,7 +635,7 @@ public class SocketService: IDisposable
             VenueSync.Log.Error($"Error during reconnection: {ex.Message}");
         }
     }
-    
+
     private async Task<bool> TryReconnectAsync()
     {
         try
@@ -650,7 +650,7 @@ public class SocketService: IDisposable
             return false;
         }
     }
-    
+
     public void Dispose()
     {
         if (_isDisposed) return;

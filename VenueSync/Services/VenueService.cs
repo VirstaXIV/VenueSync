@@ -125,6 +125,13 @@ public class VenueService : IDisposable
         {
             if (_penumbraIPC.IsAvailable && _gameStateService.IsCharacterSet)
             {
+                // If local preview is active, skip re-applying venue mods.
+                if (_stateService.VenueState.mods_preview_active)
+                {
+                    VenueSync.Log.Debug("Skipping venue mod reload due to active local preview.");
+                    return;
+                }
+
                 _failedMods.Clear();
                 _stateService.VenueState.failed_mods.Clear();
                 DisposeMannequins();

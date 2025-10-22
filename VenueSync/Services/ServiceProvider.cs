@@ -21,6 +21,7 @@ using VenueSync.Ui.Tabs;
 using VenueSync.Ui.Widgets;
 using VenueSync.Ui.Crud;
 using VenueSync.Ui.Crud.Venue;
+using VenueSync.State;
 using LocationApi = VenueSync.Services.Api.Venue.LocationApi;
 using LocationsApi = VenueSync.Services.Api.LocationApi;
 
@@ -78,10 +79,12 @@ public static class ServiceProvider
                    .AddSingleton<Configuration>()
                    .AddSingleton<VenueSettings>()
                    .AddSingleton<StateService>()
+                   .AddSingleton<ModsState>()
                    .AddSingleton<SyncFileService>()
                    .AddSingleton<PluginWatcherService>()
                    .AddSingleton<ManipulationDataManager>()
                    .AddSingleton<ChatService>()
+                   .AddSingleton<PreviewModService>()
                    .AddSingleton<CommandService>();
     
     private static ServiceManager AddIPC(this ServiceManager services)
@@ -130,6 +133,7 @@ public static class ServiceProvider
                    .AddSingleton<StreamApi>()
                    .AddSingleton<LocationApi>()
                    .AddSingleton<ScheduleApi>()
+                   .AddSingleton<ModsApi>()
                    .AddSingleton<TerritoryWatcher>()
                    .AddSingleton<VenueService>();
 
@@ -145,6 +149,7 @@ public static class ServiceProvider
                    .AddSingleton<MainWindow>()
                    .AddSingleton<VenueWindowPosition>()
                    .AddSingleton<VenueWindow>()
+                   .AddSingleton<ModManagerWindow>()
                    .AddSingleton<HouseVerifyWindowPosition>()
                    .AddSingleton<HouseVerifyWindow>()
                    .AddSingleton<ManageMannequinsWindowPosition>()

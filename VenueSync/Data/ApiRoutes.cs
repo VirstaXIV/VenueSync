@@ -52,6 +52,18 @@ public static class ApiRoutes
 
         // Mannequin
         { "mannequin.update", new ApiRoute("mannequin.update", HttpMethod.Post, "/mannequin/update", true) },
+
+        // Mods
+        { "mods.store", new ApiRoute("mods.store", HttpMethod.Post, "/mods", true) },
+        { "mods.update", new ApiRoute("mods.update", HttpMethod.Post, "/mods/{mod}", true) },
+        { "mods.destroy", new ApiRoute("mods.destroy", HttpMethod.Delete, "/mods/{mod}", true) },
+        { "mods.versions.store", new ApiRoute("mods.versions.store", HttpMethod.Post, "/mods/{mod}/versions", true) },
+        { "mods.versions.destroy", new ApiRoute("mods.versions.destroy", HttpMethod.Delete, "/mods/{mod}/versions/{version}", true) },
+
+        // Location Mods
+        { "venues.locations.mods.store", new ApiRoute("venues.locations.mods.store", HttpMethod.Post, "/venues/{venue}/locations/{location}/mods", true) },
+        { "venues.locations.mods.update", new ApiRoute("venues.locations.mods.update", HttpMethod.Post, "/venues/{venue}/locations/{location}/mods/{mod}", true) },
+        { "venues.locations.mods.destroy", new ApiRoute("venues.locations.mods.destroy", HttpMethod.Delete, "/venues/{venue}/locations/{location}/mods/{mod}", true) },
     };
 
     public static ApiRoute Get(string key)
