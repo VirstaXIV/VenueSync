@@ -292,23 +292,23 @@ public class ManageLocationWindow : Window, IDisposable
 
                 ImGui.TableSetColumnIndex(2);
 
-                var toggleLabel = $"Toggle##{mod.mod_id}";
+                var toggleLabel = $"Toggle##{mod.id}";
                 if (!_modSubmitting && ImGui.Button(toggleLabel))
                 {
                     _modSubmitting = true;
-                    _ = ToggleLocationModAsync(mod.mod_id);
+                    _ = ToggleLocationModAsync(mod.id);
                 }
 
                 ImGui.SameLine();
 
-                var deleteBtnLabel = $"Delete##{mod.mod_id}";
+                var deleteBtnLabel = $"Delete##{mod.id}";
                 if (ImGui.Button(deleteBtnLabel))
                 {
-                    ImGui.OpenPopup($"ConfirmDelete##{mod.mod_id}");
+                    ImGui.OpenPopup($"ConfirmDelete##{mod.id}");
                 }
 
                 bool open = true;
-                if (ImGui.BeginPopupModal($"ConfirmDelete##{mod.mod_id}", ref open, ImGuiWindowFlags.AlwaysAutoResize))
+                if (ImGui.BeginPopupModal($"ConfirmDelete##{mod.id}", ref open, ImGuiWindowFlags.AlwaysAutoResize))
                 {
                     ImGui.TextUnformatted("Are you sure you want to delete this mod from the location?");
                     ImGui.Spacing();
@@ -316,7 +316,7 @@ public class ManageLocationWindow : Window, IDisposable
                     if (!_modSubmitting && ImGui.Button("Yes"))
                     {
                         _modSubmitting = true;
-                        _ = DeleteLocationModAsync(mod.mod_id);
+                        _ = DeleteLocationModAsync(mod.id);
                         ImGui.CloseCurrentPopup();
                     }
 
@@ -347,7 +347,7 @@ public class ManageLocationWindow : Window, IDisposable
                 var loc = venue?.locations.FirstOrDefault(l => l.id == _locationId);
                 if (loc != null)
                 {
-                    var idx = loc.mods.FindIndex(m => m.mod_id == modItem.mod_id);
+                    var idx = loc.mods.FindIndex(m => m.id == modItem.id);
                     if (idx >= 0) loc.mods[idx] = modItem;
                     else loc.mods.Add(modItem);
                 }
@@ -387,7 +387,7 @@ public class ManageLocationWindow : Window, IDisposable
                     var loc = venue?.locations.FirstOrDefault(l => l.id == _locationId);
                     if (loc != null)
                     {
-                        var idx = loc.mods.FindIndex(m => m.mod_id == result.Data.mod_id);
+                        var idx = loc.mods.FindIndex(m => m.id == result.Data.id);
                         if (idx >= 0) loc.mods[idx] = result.Data;
                     }
                 }
@@ -423,7 +423,7 @@ public class ManageLocationWindow : Window, IDisposable
                 {
                     while (true)
                     {
-                        var idx = loc.mods.FindIndex(m => m.mod_id == locationModId);
+                        var idx = loc.mods.FindIndex(m => m.id == locationModId);
                         if (idx < 0) break;
                         loc.mods.RemoveAt(idx);
                     }

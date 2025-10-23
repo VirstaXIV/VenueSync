@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Utility;
+using Newtonsoft.Json;
 using OtterGui.Classes;
 using VenueSync.Data.DTO.Account;
 using VenueSync.State;

@@ -8,7 +8,6 @@ public record UserResponse
     public required List<UserHouseItem> houses { get; set; }
     public required List<UserCharacterItem> characters { get; set; }
     public required List<ModItem> mods { get; set; }
-    public bool success { get; init; } = false;
 }
 
 public record UserReply

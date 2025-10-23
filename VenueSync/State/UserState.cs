@@ -44,6 +44,7 @@ public record UserVenueLocationItem
 
 public record UserVenueLocationModItem
 {
+    public string id { get; set; } = "";
     public string mod_id { get; set; } = "";
     public string mannequin_id { get; set; } = "";
     public string name { get; set; } = "";

@@ -245,19 +245,28 @@ public class SocketService : IDisposable
         channel.Bind("venue.mod", OnVenueModEvent);
     }
 
+    private sealed class VenueEventPayload
+    {
+        public VenueState? venue { get; set; }
+        public VenueLocation? location { get; set; }
+    }
+
     private void OnVenueEnteredEvent(PusherEvent eventData)
     {
         VenueSync.Log.Debug($"Received event: venue.entered (Channel: {eventData.ChannelName})");
 
         try
         {
-            var enteredData = JsonConvert.DeserializeObject<VenueState>(eventData.Data);
-            if (enteredData != null)
+            var payload = JsonConvert.DeserializeObject<VenueEventPayload>(eventData.Data);
+            if (payload?.venue != null && payload.location != null)
             {
-                VenueSync.Log.Debug($"Processing venue.entered for Location ID: {enteredData.location.id}");
-                _venueEntered.Invoke(enteredData);
+                var venueState = payload.venue;
+                venueState.location = payload.location;
+
+                VenueSync.Log.Debug($"Processing venue.entered for Location ID: {venueState.location.id}");
+                _venueEntered.Invoke(venueState);
                 _ = Task.Run(async () =>
-                                 await AddChannelAsync($"presence-venue.{enteredData.location.id}").ConfigureAwait(false));
+                                 await AddChannelAsync($"presence-venue.{venueState.location.id}").ConfigureAwait(false));
             }
         }
         catch (Exception ex)
@@ -328,10 +337,12 @@ public class SocketService : IDisposable
 
         try
         {
-            var updatedData = JsonConvert.DeserializeObject<VenueState>(eventData.Data);
-            if (updatedData != null)
+            var payload = JsonConvert.DeserializeObject<VenueEventPayload>(eventData.Data);
+            if (payload?.venue != null && payload.location != null)
             {
-                _venueUpdated.Invoke(updatedData);
+                var updatedState = payload.venue;
+                updatedState.location = payload.location;
+                _venueUpdated.Invoke(updatedState);
             }
         }
         catch (Exception ex)
