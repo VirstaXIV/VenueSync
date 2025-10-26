@@ -131,6 +131,7 @@ public static class ServiceProvider
                    .AddSingleton<VenueApi>()
                    .AddSingleton<StaffApi>()
                    .AddSingleton<StreamApi>()
+                   .AddSingleton<HouseApi>()
                    .AddSingleton<LocationApi>()
                    .AddSingleton<ScheduleApi>()
                    .AddSingleton<ModsApi>()
@@ -159,5 +160,6 @@ public static class ServiceProvider
                    .AddSingleton<ManageStreamWindow>()
                    .AddSingleton<ManageScheduleWindow>()
                    .AddSingleton<ManageVenueWindow>()
+                   .AddSingleton<ManageHouseWindow>()
                    .AddSingleton<VenueSyncWindowSystem>();
 }

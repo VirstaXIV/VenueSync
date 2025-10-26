@@ -65,6 +65,10 @@ public static class ApiRoutes
         { "venues.locations.mods.store", new ApiRoute("venues.locations.mods.store", HttpMethod.Post, "/venues/{venue}/locations/{location}/mods", true) },
         { "venues.locations.mods.update", new ApiRoute("venues.locations.mods.update", HttpMethod.Post, "/venues/{venue}/locations/{location}/mods/{mod}", true) },
         { "venues.locations.mods.destroy", new ApiRoute("venues.locations.mods.destroy", HttpMethod.Delete, "/venues/{venue}/locations/{location}/mods/{mod}", true) },
+
+        // Houses
+        { "houses.grant.store", new ApiRoute("houses.grant.store", HttpMethod.Post, "/houses/{house}/grant", true) },
+        { "houses.grant.destroy", new ApiRoute("houses.grant.destroy", HttpMethod.Delete, "/houses/{house}/grant/{houseGrant}", true) },
     };
 
     public static ApiRoute Get(string key)

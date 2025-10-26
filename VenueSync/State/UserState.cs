@@ -8,6 +8,13 @@ public record UserHouseMannequinItem
     public string name { get; init; } = "";
 }
 
+public record UserHouseGrantItem
+{
+    public string id { get; set; } = "";
+    public string owner_lodestone_id { get; set; } = "";
+    public string granted_lodestone_id { get; set; } = "";
+}
+
 public record UserVenueStreamItem
 {
     public string id { get; set; } = "";
@@ -84,6 +91,7 @@ public record UserHouseItem
     public string data_center { get; init; } = "";
     public bool verified { get; init; } = false;
     public bool perms { get; init; } = false;
+    public List<UserHouseGrantItem> grants { get; set; } = [];
     public List<UserHouseMannequinItem> mannequins { get; set; } = [];
 }
 

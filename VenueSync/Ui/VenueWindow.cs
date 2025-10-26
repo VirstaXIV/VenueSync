@@ -178,7 +178,7 @@ public class VenueWindow : Window, IDisposable
 
     private static string GetStreamUrl(VenueStream stream)
     {
-        var t = stream.type?.ToLowerInvariant();
+        var t = stream.type.ToLowerInvariant();
         return t switch
         {
             "kick" => $"https://kick.com/{stream.username}",

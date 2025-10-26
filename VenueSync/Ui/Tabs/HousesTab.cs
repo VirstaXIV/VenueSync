@@ -9,7 +9,7 @@ using VenueSync.Ui.Crud;
 
 namespace VenueSync.Ui.Tabs;
 
-public class HousesTab(StateService stateService, HouseVerifyWindow houseVerifyWindow, ManageMannequinsWindow manageMannequinsWindow): ITab
+public class HousesTab(StateService stateService, HouseVerifyWindow houseVerifyWindow, ManageMannequinsWindow manageMannequinsWindow, ManageHouseWindow manageHouseWindow): ITab
 {
     public ReadOnlySpan<byte> Label => "Houses"u8;
     
@@ -94,22 +94,23 @@ public class HousesTab(StateService stateService, HouseVerifyWindow houseVerifyW
 
     private void DrawHousesTable()
     {
-        if (ImGui.BeginTable("Houses", 5))
+        if (ImGui.BeginTable("Houses", 6))
         {
             ImGui.TableSetupColumn("Owner", ImGuiTableColumnFlags.WidthFixed, 160);
             ImGui.TableSetupColumn("Type", ImGuiTableColumnFlags.WidthFixed, 90);
             ImGui.TableSetupColumn("Perms", ImGuiTableColumnFlags.WidthFixed, 40);
             ImGui.TableSetupColumn("Address", ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupColumn("Verified", ImGuiTableColumnFlags.WidthFixed, 60);
+            ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 100);
             ImGui.TableHeadersRow();
-            
+
             if (stateService.HasHouses())
             {
                 foreach (var house in stateService.UserState.houses)
                 {
                     var address = $"{house.district} {house.ward}/{house.plot} {house.world} [{house.data_center}]";
                     var color = GetHouseColor(house);
-                    
+
                     ImGui.TableNextColumn();
                     ImGui.TextColored(color, house.owner);
                     ImGui.TableNextColumn();
@@ -120,6 +121,14 @@ public class HousesTab(StateService stateService, HouseVerifyWindow houseVerifyW
                     ImGui.TextColored(color, address);
                     ImGui.TableNextColumn();
                     ImGui.TextColored(color, house.verified ? "Yes" : "No");
+                    ImGui.TableNextColumn();
+                    if (house.perms)
+                    {
+                        if (ImGui.Button($"Manage##House{house.id}"))
+                        {
+                            manageHouseWindow.OpenForHouse(house);
+                        }
+                    }
                 }
             }
             else

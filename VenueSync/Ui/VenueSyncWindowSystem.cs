@@ -12,10 +12,7 @@ public class VenueSyncWindowSystem: IDisposable
     private readonly IUiBuilder _uiBuilder;
     private readonly MainWindow _mainWindow;
     private readonly VenueWindow _venueWindow;
-    private readonly ManageVenueWindow _manageVenueWindow;
-    private readonly ManageStaffWindow _manageStaffWindow;
-    private readonly ModManagerWindow _modManagerWindow;
-
+    
     public VenueSyncWindowSystem(
         IUiBuilder uiBuilder,
         MainWindow mainWindow,
@@ -24,6 +21,7 @@ public class VenueSyncWindowSystem: IDisposable
         ManageMannequinsWindow mannequinsWindow,
         ManageVenueWindow manageVenueWindow,
         ManageStaffWindow manageStaffWindow,
+        ManageHouseWindow manageHouseWindow,
         ManageStreamWindow manageStreamWindow,
         ManageScheduleWindow manageScheduleWindow,
         ManageLocationWindow manageLocationWindow,
@@ -32,9 +30,6 @@ public class VenueSyncWindowSystem: IDisposable
         _uiBuilder = uiBuilder;
         _mainWindow = mainWindow;
         _venueWindow = venueWindow;
-        _manageVenueWindow = manageVenueWindow;
-        _manageStaffWindow = manageStaffWindow;
-        _modManagerWindow = modManagerWindow;
 
         _windowSystem.AddWindow(mainWindow);
         _windowSystem.AddWindow(venueWindow);
@@ -45,6 +40,7 @@ public class VenueSyncWindowSystem: IDisposable
         _windowSystem.AddWindow(manageStreamWindow);
         _windowSystem.AddWindow(manageScheduleWindow);
         _windowSystem.AddWindow(manageLocationWindow);
+        _windowSystem.AddWindow(manageHouseWindow);
         _windowSystem.AddWindow(modManagerWindow);
         
         _uiBuilder.OpenMainUi += _mainWindow.Toggle;
