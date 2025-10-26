@@ -12,7 +12,10 @@ public record UserVenueStreamItem
 {
     public string id { get; set; } = "";
     public string name { get; set; } = "";
+    public string username { get; set; } = "";
     public string type { get; set; } = "";
+    public string logo { get; set; } = "";
+    public string hash { get; set; } = "";
 }
 
 public record UserVenueScheduleItem

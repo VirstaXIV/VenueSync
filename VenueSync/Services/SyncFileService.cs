@@ -157,7 +157,6 @@ public class SyncFileService : IDisposable
     
     #endregion
 
-    // HTTP request header helpers for file downloads
     private static void SetUserAgent(HttpRequestHeaders headers)
     {
         var ver = Assembly.GetExecutingAssembly().GetName().Version;

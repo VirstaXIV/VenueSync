@@ -468,10 +468,36 @@ public class SettingsTab(Configuration configuration, StateService stateService,
     {
         _registerMessage = string.Empty;
         _registered = false;
-        configuration.ServerToken = string.Empty;
-        configuration.ServerUserID = string.Empty;
-        configuration.SaveNow();
-        VenueSync.Messager.NotificationMessage("VenueSync Authentication Removed", NotificationType.Info);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (stateService.Connection.Connected)
+                {
+                    _isDisconnecting = true;
+                    try
+                    {
+                        await socketService.DisconnectAsync(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        VenueSync.Log.Error($"Disconnect before token removal failed: {ex.Message}");
+                    }
+                    finally
+                    {
+                        _isDisconnecting = false;
+                    }
+                }
+            }
+            finally
+            {
+                configuration.ServerToken = string.Empty;
+                configuration.ServerUserID = string.Empty;
+                configuration.SaveNow();
+                VenueSync.Messager.NotificationMessage("VenueSync Authentication Removed", NotificationType.Info);
+            }
+        });
     }
 
     private void HandleConnect()

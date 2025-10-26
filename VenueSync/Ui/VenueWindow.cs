@@ -166,20 +166,62 @@ public class VenueWindow : Window, IDisposable
         ImGui.Spacing();
     }
 
+    private static string GetPlatformDisplayName(string? type)
+    {
+        return (type?.ToLowerInvariant()) switch
+        {
+            "kick" => "Kick",
+            "youtube" => "YouTube",
+            _ => "Twitch",
+        };
+    }
+
+    private static string GetStreamUrl(VenueStream stream)
+    {
+        var t = stream.type?.ToLowerInvariant();
+        return t switch
+        {
+            "kick" => $"https://kick.com/{stream.username}",
+            "youtube" => $"https://youtube.com/@{stream.username}",
+            _ => $"https://twitch.tv/{stream.username}",
+        };
+    }
+
     private void DrawLiveStream(VenueState venue)
     {
         var liveStream = venue.streams.FirstOrDefault(v => v.name == venue.active_stream);
         if (liveStream == null) return;
 
-        ImGui.SetCursorPosX((SidebarWidth - StreamButtonWidth) / 2);
+        float streamLogoSize = LogoSize / 4f;
+        var platform = GetPlatformDisplayName(liveStream.type);
+        var url = GetStreamUrl(liveStream);
+        var tooltip = $"Watch {liveStream.name} live on {platform}";
 
-        var buttonText = $"{liveStream.name}";
-        var tooltip = $"Watch {liveStream.name} live on Twitch";
-        
-        DrawStyledButton(buttonText, VenueColors.TwitchButton, VenueColors.TwitchButtonHover, 
-            new Vector2(StreamButtonWidth, ButtonHeight), 
-            () => Util.OpenLink($"https://twitch.tv/{liveStream.name}"), 
-            tooltip);
+        if (liveStream.logoTexture != null)
+        {
+            ImGui.SetCursorPosX((SidebarWidth - streamLogoSize) / 2);
+            ImGui.Image(liveStream.logoTexture.Handle, new Vector2(streamLogoSize, streamLogoSize));
+
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip(tooltip);
+            }
+
+            if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
+            {
+                Util.OpenLink(url);
+            }
+        }
+        else
+        {
+            ImGui.SetCursorPosX((SidebarWidth - StreamButtonWidth) / 2);
+
+            var buttonText = $"{liveStream.name}";
+            DrawStyledButton(buttonText, VenueColors.TwitchButton, VenueColors.TwitchButtonHover, 
+                new Vector2(StreamButtonWidth, ButtonHeight), 
+                () => Util.OpenLink(url), 
+                tooltip);
+        }
 
         ImGui.Spacing();
     }
@@ -436,13 +478,35 @@ public class VenueWindow : Window, IDisposable
         {
             var isActive = stream.name == _stateService.VenueState.active_stream;
             var buttonText = stream.name;
-            var tooltip = $"Visit {stream.name} on Twitch";
+            var platform = GetPlatformDisplayName(stream.type);
+            var url = GetStreamUrl(stream);
+            var tooltip = $"Visit {stream.name} on {platform}";
 
-            var buttonColor = isActive ? VenueColors.TwitchButton : new Vector4(0.4f, 0.4f, 0.5f, 1.0f);
-            var hoverColor = isActive ? VenueColors.TwitchButtonHover : new Vector4(0.5f, 0.5f, 0.6f, 1.0f);
+            float iconSize = LogoSize / 4f;
 
-            DrawStyledButton(buttonText, buttonColor, hoverColor,
-                new Vector2(100, 30), () => Util.OpenLink($"https://twitch.tv/{stream.name}"), tooltip);
+            if (stream.logoTexture != null)
+            {
+                ImGui.Image(stream.logoTexture.Handle, new Vector2(iconSize, iconSize));
+
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.SetTooltip(tooltip);
+                }
+
+                if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
+                {
+                    Util.OpenLink(url);
+                }
+            }
+            else
+            {
+                var buttonColor = isActive ? VenueColors.TwitchButton : new Vector4(0.4f, 0.4f, 0.5f, 1.0f);
+                var hoverColor = isActive ? VenueColors.TwitchButtonHover : new Vector4(0.5f, 0.5f, 0.6f, 1.0f);
+
+                DrawStyledButton(buttonText, buttonColor, hoverColor,
+                    new Vector2(100, 30), () => Util.OpenLink(url), tooltip);
+            }
+
             if (i % 4 != 0)
             {
                 ImGui.SameLine();

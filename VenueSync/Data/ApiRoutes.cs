@@ -48,6 +48,7 @@ public static class ApiRoutes
         // Streams
         { "venues.streams.store", new ApiRoute("venues.streams.store", HttpMethod.Post, "/venues/{venue}/streams", true) },
         { "venues.streams.update", new ApiRoute("venues.streams.update", HttpMethod.Post, "/venues/{venue}/streams/{stream}", true) },
+        { "venues.streams.logo", new ApiRoute("venues.streams.logo", HttpMethod.Post, "/venues/{venue}/streams/{stream}/logo", true) },
         { "venues.streams.destroy", new ApiRoute("venues.streams.destroy", HttpMethod.Delete, "/venues/{venue}/streams/{stream}", true) },
 
         // Mannequin

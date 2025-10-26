@@ -1,4 +1,7 @@
 using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using VenueSync.State;
@@ -42,6 +45,32 @@ public sealed class StreamApi
     {
         return _api.SendAsync<UserVenueStreamItem>(
             "venues.streams.destroy",
+            routeParams: new Dictionary<string, string>
+            {
+                { "venue", venueId },
+                { "stream", streamId }
+            },
+            ct: ct
+        );
+    }
+
+    // POST /venues/{venue}/streams/{stream}/logo
+    public Task<ApiResult<UserVenueStreamItem>> UploadLogoAsync(
+        string venueId,
+        string streamId,
+        Stream logoStream,
+        string fileName,
+        string contentType = "application/octet-stream",
+        CancellationToken ct = default)
+    {
+        var multipart = new MultipartFormDataContent();
+        var fileContent = new StreamContent(logoStream);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        multipart.Add(fileContent, "logo", fileName);
+
+        return _api.SendAsync<UserVenueStreamItem>(
+            "venues.streams.logo",
+            body: multipart,
             routeParams: new Dictionary<string, string>
             {
                 { "venue", venueId },

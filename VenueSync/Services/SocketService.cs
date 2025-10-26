@@ -66,6 +66,7 @@ public class SocketService : IDisposable
     private readonly ServiceDisconnected _serviceDisconnected;
     private readonly LoggedIn _loggedIn;
     private readonly LoggedOut _loggedOut;
+    private readonly TerritoryChanged _territoryChanged;
 
     private Pusher? _pusher;
     private readonly Dictionary<string, Channel> _channels = new();
@@ -88,6 +89,7 @@ public class SocketService : IDisposable
         LoggedOut loggedOut,
         VenueUpdated venueUpdated,
         VenueExited venueExited,
+        TerritoryChanged territoryChanged,
         VenueMod venueMod)
     {
         _configuration = configuration;
@@ -98,6 +100,7 @@ public class SocketService : IDisposable
         _venueEntered = venueEntered;
         _venueUpdated = venueUpdated;
         _venueExited = venueExited;
+        _territoryChanged = territoryChanged;
         _venueMod = venueMod;
         _loggedIn = loggedIn;
         _loggedOut = loggedOut;
@@ -107,6 +110,7 @@ public class SocketService : IDisposable
         _loggedIn.Subscribe(OnLoggedIn, LoggedIn.Priority.High);
         _loggedOut.Subscribe(OnLoggedOut, LoggedOut.Priority.High);
         _venueExited.Subscribe(OnVenueExited, VenueExited.Priority.High);
+        _territoryChanged.Subscribe(OnTerritoryChanged, TerritoryChanged.Priority.High);
     }
 
     private void OnLoggedIn()
@@ -129,6 +133,33 @@ public class SocketService : IDisposable
     {
         VenueSync.Log.Debug($"Leaving venue channel: {id}");
         _ = Task.Run(async () => await RemoveChannelAsync($"presence-venue.{id}").ConfigureAwait(false));
+    }
+
+    public Task LeaveVenueChannelAsync(string id)
+    {
+        if (string.IsNullOrEmpty(id))
+            return Task.CompletedTask;
+
+        return RemoveChannelAsync($"presence-venue.{id}");
+    }
+
+    public Task LeaveCurrentVenueChannelAsync()
+    {
+        var id = _stateService.VenueState?.location?.id;
+        if (string.IsNullOrEmpty(id))
+            return Task.CompletedTask;
+
+        return RemoveChannelAsync($"presence-venue.{id}");
+    }
+
+    private void OnTerritoryChanged()
+    {
+        var id = _stateService.VenueState?.location?.id;
+        if (!string.IsNullOrEmpty(id))
+        {
+            VenueSync.Log.Debug($"Territory change detected - leaving venue channel: {id}");
+            _ = Task.Run(async () => await RemoveChannelAsync($"presence-venue.{id}").ConfigureAwait(false));
+        }
     }
 
     private Pusher CreatePusher()
@@ -670,6 +701,7 @@ public class SocketService : IDisposable
         _loggedIn.Unsubscribe(OnLoggedIn);
         _loggedOut.Unsubscribe(OnLoggedOut);
         _venueExited.Unsubscribe(OnVenueExited);
+        _territoryChanged.Unsubscribe(OnTerritoryChanged);
 
         _reconnectCts?.Cancel();
         _reconnectCts?.Dispose();

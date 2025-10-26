@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Windowing;
@@ -8,6 +9,7 @@ using OtterGui.Services;
 using OtterGui.Widgets;
 using VenueSync.Events;
 using VenueSync.Services;
+using VenueSync.Services.Api;
 using VenueSync.Ui.Tabs;
 
 namespace VenueSync.Ui;
@@ -37,6 +39,8 @@ public class MainWindow : Window, IDisposable
     private readonly ModManagerWindow _modManagerWindow;
     private readonly TabSelected _event;
     private readonly TerritoryChanged _territoryChanged;
+    private readonly LocationApi _locationApi;
+    private readonly SocketService _socketService;
     private readonly MainWindowPosition _position;
 
     private readonly SettingsTab _settings;
@@ -60,6 +64,8 @@ public class MainWindow : Window, IDisposable
         HousesTab housesTab,
         TabSelected @event,
         TerritoryChanged territoryChanged,
+        LocationApi locationApi,
+        SocketService socketService,
         MainWindowPosition position) : base("VenueSyncMainWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
@@ -76,6 +82,8 @@ public class MainWindow : Window, IDisposable
         _modManagerWindow = modManagerWindow;
         _event = @event;
         _territoryChanged = territoryChanged;
+        _locationApi = locationApi;
+        _socketService = socketService;
         _position = position;
 
         _settings = settings;
@@ -158,9 +166,20 @@ public class MainWindow : Window, IDisposable
             {
                 _venueWindow.Toggle();
             }
-            _stateService.ResetHouseState();
-            _stateService.ResetVenueState();
-            _territoryChanged.Invoke();
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _socketService.LeaveCurrentVenueChannelAsync().ConfigureAwait(false);
+                    _territoryChanged.Invoke();
+                    await _locationApi.SendLocation(_stateService.CurrentHouse).ConfigureAwait(false);
+                }
+                catch (Exception)
+                {
+                    VenueSync.Log.Error("Failed to recheck venue.");
+                }
+            });
         }
 
         if (IsClientMode())

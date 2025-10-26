@@ -101,6 +101,7 @@ public class VenueService : IDisposable
     public void Dispose()
     {
         _stateService.VenueState.logoTexture?.Dispose();
+        DisposeStreamTextures();
         DisposeMannequins();
     }
 
@@ -161,7 +162,7 @@ public class VenueService : IDisposable
         {
             if (mannequin.Value.Objects.Count > 0)
             {
-                _penumbraRedrawObject.Invoke(mannequin.Value.Objects[0].Index.Index, RedrawType.Redraw);
+                _penumbraRedrawObject.Invoke(mannequin.Value.Objects[0].Index.Index);
             }
         }
     }
@@ -354,47 +355,134 @@ public class VenueService : IDisposable
         _venueSettings.Save();
     }
 
-    private async Task LoadLogoTextureAsync(string imagePath)
+    private async Task LoadTextureAsync(string imagePath, Action disposeExistingTexture, Func<Stream, Task> assignTextureFromStream, string successLogMessage, string errorContext)
     {
         try
         {
-            _stateService.VenueState.logoTexture?.Dispose();
+            disposeExistingTexture?.Invoke();
 
             await using var fileStream = File.OpenRead(imagePath);
-            _stateService.VenueState.logoTexture = await _textureProvider.CreateFromImageAsync(
-                fileStream,
-                leaveOpen: false,
-                cancellationToken: CancellationToken.None
-            );
-            
-            VenueSync.Log.Debug("Logo texture loaded successfully");
+            await assignTextureFromStream(fileStream);
+
+            VenueSync.Log.Debug(successLogMessage);
         }
         catch (Exception ex)
         {
-            VenueSync.Log.Error($"Failed to load logo texture: {ex.Message}");
+            VenueSync.Log.Error($"Failed to load {errorContext}: {ex.Message}");
+        }
+    }
+
+    private async Task LoadLogoTextureAsync(string imagePath)
+    {
+        await LoadTextureAsync(
+            imagePath,
+            () => _stateService.VenueState.logoTexture?.Dispose(),
+            async fileStream => _stateService.VenueState.logoTexture = await _textureProvider.CreateFromImageAsync(
+                fileStream,
+                leaveOpen: false,
+                cancellationToken: CancellationToken.None
+            ),
+            "Logo texture loaded successfully",
+            "logo texture"
+        );
+    }
+
+    private async Task LoadStreamLogoTextureAsync(VenueStream stream, string imagePath)
+    {
+        await LoadTextureAsync(
+            imagePath,
+            () => stream.logoTexture?.Dispose(),
+            async fileStream => stream.logoTexture = await _textureProvider.CreateFromImageAsync(
+                fileStream,
+                leaveOpen: false,
+                cancellationToken: CancellationToken.None
+            ),
+            $"Stream logo texture loaded for {stream.name} from '{imagePath}'",
+            $"stream logo texture for {stream.name} (path='{imagePath}')"
+        );
+    }
+
+    private void DisposeStreamTextures()
+    {
+        try
+        {
+            var count = 0;
+            foreach (var s in _stateService.VenueState.streams)
+            {
+                if (s.logoTexture != null)
+                {
+                    count++;
+                    s.logoTexture.Dispose();
+                }
+                s.logoTexture = null;
+            }
+
+            VenueSync.Log.Debug($"Disposed {count} stream logo textures.");
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Debug($"Error disposing stream textures: {ex.Message}");
+        }
+    }
+
+    private void QueueLogoDownloadsForCurrentVenue()
+    {
+        var vs = _stateService.VenueState;
+
+        _syncFileService.MaybeDownloadFile(
+            vs.id,
+            vs.logo,
+            "png",
+            vs.hash,
+            path => _ = Task.Run(async () =>
+            {
+                if (path == null) return;
+                await LoadLogoTextureAsync(path);
+            })
+        );
+
+        VenueSync.Log.Debug($"Processing streams: count={vs.streams.Count}, active='{vs.active_stream}'");
+        foreach (var stream in vs.streams)
+        {
+            if (string.IsNullOrEmpty(stream.logo))
+            {
+                VenueSync.Log.Debug($"Stream '{stream.name}' has no logo URL; skipping download.");
+                continue;
+            }
+
+            var fileId = $"{vs.id}_stream_{stream.id}";
+            VenueSync.Log.Debug($"Queueing logo download for stream '{stream.name}': url='{stream.logo}', fileId='{fileId}'");
+            _syncFileService.MaybeDownloadFile(
+                fileId,
+                stream.logo,
+                "png",
+                stream.hash,
+                path => _ = Task.Run(async () =>
+                {
+                    if (path == null)
+                    {
+                        VenueSync.Log.Warning($"Download for stream '{stream.name}' returned null path (url='{stream.logo}').");
+                        return;
+                    }
+
+                    VenueSync.Log.Debug($"Download for stream '{stream.name}' completed: path='{path}'. Starting texture load...");
+                    await LoadStreamLogoTextureAsync(stream, path);
+                })
+            );
         }
     }
 
     private void OnVenueEntered(VenueState data)
     {
         DisposeMannequins();
+        DisposeStreamTextures();
         _failedMods.Clear();
         _stateService.VenueState.failed_mods.Clear();
 
         UpdateVenueState(data);
         _stateService.VenueState.location.mods.Clear();
 
-        _syncFileService.MaybeDownloadFile(
-            data.id, 
-            data.logo, 
-            "png", 
-            data.hash, 
-            path => _ = Task.Run(async () =>
-            {
-                if (path == null) return; 
-                await LoadLogoTextureAsync(path);
-            })
-        );
+        QueueLogoDownloadsForCurrentVenue();
 
         VenueSync.Messager.NotificationMessage($"Welcome to [{data.name}]", NotificationType.Success);
 
@@ -438,19 +526,10 @@ public class VenueService : IDisposable
         _failedMods.Clear();
         _stateService.VenueState.failed_mods.Clear();
 
+        DisposeStreamTextures();
         UpdateVenueState(data);
 
-        _syncFileService.MaybeDownloadFile(
-            data.id, 
-            data.logo, 
-            "png", 
-            data.hash, 
-            path => _ = Task.Run(async () =>
-            {
-                if (path == null) return; 
-                await LoadLogoTextureAsync(path);
-            })
-        );
+        QueueLogoDownloadsForCurrentVenue();
 
         _stateService.VenueState.location.mods.Clear();
         _stateService.VenueState.location.mods.AddRange(preservedMods);
@@ -473,11 +552,17 @@ public class VenueService : IDisposable
         _stateService.VenueState.active_stream = venue.active_stream;
         
         _venueSettings.Load();
+
+        var streamCount = _stateService.VenueState.streams?.Count ?? 0;
+        var withLogo = _stateService.VenueState.streams?.Count(s => !string.IsNullOrEmpty(s.logo)) ?? 0;
+        VenueSync.Log.Debug($"UpdateVenueState: streams={streamCount}, withLogo={withLogo}, active='{_stateService.VenueState.active_stream}'");
     }
 
     private void OnVenueExited(string id)
     {
         DisposeMods();
+        _stateService.VenueState.logoTexture?.Dispose();
+        DisposeStreamTextures();
         
         if (_windowSystem.VenueWindowOpened())
         {
@@ -488,6 +573,8 @@ public class VenueService : IDisposable
     private void OnServiceDisconnected()
     {
         DisposeMods();
+        _stateService.VenueState.logoTexture?.Dispose();
+        DisposeStreamTextures();
         _stateService.ResetVenueState();
     }
 }
