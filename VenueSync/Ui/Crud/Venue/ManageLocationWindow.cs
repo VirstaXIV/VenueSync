@@ -26,7 +26,6 @@ public class ManageLocationWindow : Window, IDisposable
     private string _houseId = string.Empty;
     private bool _isSubmitting;
 
-    // Mods management state
     private string _selectedMannequinId = string.Empty;
     private string _selectedModId = string.Empty;
     private bool _modSubmitting;
@@ -170,7 +169,6 @@ public class ManageLocationWindow : Window, IDisposable
         ImGui.TextUnformatted("Add Mod to Location");
         ImGui.Spacing();
 
-        // Select Mannequin
         ImGui.TextUnformatted("Mannequin");
         ImGui.SameLine();
         ImGui.SetNextItemWidth(180);
@@ -178,7 +176,6 @@ public class ManageLocationWindow : Window, IDisposable
 
         ImGui.SameLine();
 
-        // Select Mod
         ImGui.TextUnformatted("Mod");
         ImGui.SameLine();
         ImGui.SetNextItemWidth(-1);
@@ -273,10 +270,11 @@ public class ManageLocationWindow : Window, IDisposable
             return;
         }
 
-        if (ImGui.BeginTable("LocationModsTable", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp))
+        if (ImGui.BeginTable("LocationModsTable", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp))
         {
             ImGui.TableSetupColumn("Mod");
             ImGui.TableSetupColumn("Mannequin");
+            ImGui.TableSetupColumn("Enabled");
             ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 180);
             ImGui.TableHeadersRow();
 
@@ -291,9 +289,15 @@ public class ManageLocationWindow : Window, IDisposable
                 ImGui.TextUnformatted(GetMannequinName(mod.mannequin_id));
 
                 ImGui.TableSetColumnIndex(2);
+                ImGui.TextUnformatted(mod.enabled ? "Enabled" : "Disabled");
+
+                ImGui.TableSetColumnIndex(3);
 
                 var toggleLabel = $"Toggle##{mod.id}";
-                if (!_modSubmitting && ImGui.Button(toggleLabel))
+                ImGui.BeginDisabled(_modSubmitting);
+                var togglePressed = ImGui.Button(toggleLabel);
+                ImGui.EndDisabled();
+                if (togglePressed && !_modSubmitting)
                 {
                     _modSubmitting = true;
                     _ = ToggleLocationModAsync(mod.id);

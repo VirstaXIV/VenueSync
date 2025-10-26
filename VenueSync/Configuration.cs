@@ -5,6 +5,7 @@ using Dalamud.Configuration;
 using Newtonsoft.Json;
 using ErrorEventArgs = Newtonsoft.Json.Serialization.ErrorEventArgs;
 using VenueSync.Services;
+using VenueSync.State;
 
 namespace VenueSync;
 
@@ -22,11 +23,10 @@ public class Configuration : IPluginConfiguration, ISavable
 
     public int Version { get; set; } = Constants.CurrentVersion;
     public string SyncFolder { get; set; } = string.Empty;
-
-    // Storage management settings
-    public long MaxStorageSizeBytes { get; set; } = 10L * 1024 * 1024 * 1024; // 10 GB default
-    public int FileRetentionDays { get; set; } = 30; // Delete files not accessed in 30 days
+    public long MaxStorageSizeBytes { get; set; } = 10L * 1024 * 1024 * 1024; 
+    public int FileRetentionDays { get; set; } = 30; 
     public bool AutoCleanupEnabled { get; set; } = true;
+    public List<ModPenumbraLink> PenumbraLinks { get; set; } = new();
 
     [JsonIgnore] private readonly SaveService _saveService;
 

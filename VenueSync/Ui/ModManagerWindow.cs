@@ -22,6 +22,7 @@ public class ModManagerWindow : Window
     private readonly StateService _stateService;
     private readonly IPCManager _ipcManager;
     private readonly AccountApi _accountApi;
+    private readonly Configuration _configuration;
 
     private int _selectedIndex = -1;
     private bool _confirmDelete;
@@ -37,7 +38,6 @@ public class ModManagerWindow : Window
     private string _editActiveVersionId = "";
     private string _penumbraFolder = "";
 
-    // State for version deletion confirmation
     private bool _confirmDeleteVersion;
     private string _pendingDeleteVersionId = "";
     private string _pendingDeleteVersionName = "";
@@ -51,6 +51,7 @@ public class ModManagerWindow : Window
         FileDialogManager fileDialogManager,
         IPCManager ipcManager,
         AccountApi accountApi,
+        Configuration configuration,
         ServiceDisconnected serviceDisconnected
     ) : base("Mod Management###VenueSyncModManager")
     {
@@ -61,6 +62,7 @@ public class ModManagerWindow : Window
         _fileDialogManager = fileDialogManager;
         _ipcManager = ipcManager;
         _accountApi = accountApi;
+        _configuration = configuration;
 
         SizeConstraints = new WindowSizeConstraints {
             MinimumSize = new Vector2(800, 500),
@@ -75,6 +77,23 @@ public class ModManagerWindow : Window
         if (IsOpen)
         {
             Toggle();
+        }
+    }
+
+    public override void OnOpen()
+    {
+        try
+        {
+            if (_configuration.PenumbraLinks != null && _configuration.PenumbraLinks.Count > 0)
+            {
+                _modsState.penumbraLinks = _configuration.PenumbraLinks
+                    .Select(l => new ModPenumbraLink { mod_id = l.mod_id, path = l.path })
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Warning($"Failed to load penumbra links from configuration: {ex.Message}");
         }
     }
 
@@ -311,10 +330,10 @@ public class ModManagerWindow : Window
 
     private void DrawVersionsTable(ModItem mod)
     {
-        if (ImGui.BeginTable("VersionsTable", 2, ImGuiTableFlags.SizingFixedFit))
+        if (ImGui.BeginTable("VersionsTable", 2, ImGuiTableFlags.SizingStretchProp))
         {
-            ImGui.TableSetupColumn("Version");
-            ImGui.TableSetupColumn("Actions");
+            ImGui.TableSetupColumn("Version", ImGuiTableColumnFlags.WidthStretch, 1.0f);
+            ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 110.0f);
             ImGui.TableHeadersRow();
 
             foreach (var v in mod.versions.ToList())
@@ -322,9 +341,18 @@ public class ModManagerWindow : Window
                 ImGui.TableNextRow();
                 ImGui.TableSetColumnIndex(0);
                 ImGui.Text($"{v.name}");
+
                 ImGui.TableSetColumnIndex(1);
                 ImGui.BeginDisabled(_modsApi == null);
-                if (ImGui.SmallButton($"Delete##ver_{v.id}"))
+
+                var style = ImGui.GetStyle();
+                var btnText = "Delete";
+                var btnWidth = ImGui.CalcTextSize(btnText).X + style.FramePadding.X * 2;
+                var availX = ImGui.GetContentRegionAvail().X;
+                if (availX > btnWidth)
+                    ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availX - btnWidth));
+
+                if (ImGui.SmallButton($"{btnText}##ver_{v.id}"))
                 {
                     _pendingDeleteVersionId = v.id;
                     _pendingDeleteVersionName = v.name ?? v.id;
@@ -374,7 +402,22 @@ public class ModManagerWindow : Window
         var existing = _modsState.penumbraLinks.FirstOrDefault(p => p.mod_id == modId);
         if (existing == null)
         {
-            _modsState.penumbraLinks.Add(new ModPenumbraLink
+            var link = new ModPenumbraLink
+            {
+                mod_id = modId,
+                path = folder
+            };
+            _modsState.penumbraLinks.Add(link);
+        }
+        else
+        {
+            existing.path = folder;
+        }
+
+        var existingCfg = _configuration.PenumbraLinks.FirstOrDefault(p => p.mod_id == modId);
+        if (existingCfg == null)
+        {
+            _configuration.PenumbraLinks.Add(new ModPenumbraLink
             {
                 mod_id = modId,
                 path = folder
@@ -382,8 +425,10 @@ public class ModManagerWindow : Window
         }
         else
         {
-            existing.path = folder;
+            existingCfg.path = folder;
         }
+
+        _configuration.Save();
     }
 
     private void LoadEditorFromModel()
@@ -527,6 +572,11 @@ public class ModManagerWindow : Window
 
             if (ok)
             {
+                // Remove any related penumbra link(s) from local state and configuration and persist
+                _modsState.penumbraLinks.RemoveAll(p => p.mod_id == mod.id);
+                _configuration.PenumbraLinks.RemoveAll(p => p.mod_id == mod.id);
+                _configuration.Save();
+
                 var user = await _accountApi.User().ConfigureAwait(false);
                 if (user.Success)
                 {

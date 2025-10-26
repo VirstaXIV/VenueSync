@@ -501,6 +501,33 @@ public class VenueService : IDisposable
 
         var mods = _stateService.VenueState.location.mods;
 
+        if (!data.mod.enabled)
+        {
+            var removed = false;
+            while (true)
+            {
+                var idx = mods.FindIndex(m => string.Equals(m.id, data.mod.id, StringComparison.OrdinalIgnoreCase));
+                if (idx < 0) break;
+                mods.RemoveAt(idx);
+                removed = true;
+            }
+
+            if (removed)
+            {
+                VenueSync.Log.Debug($"Removed disabled mod {data.mod.name} ({data.mod.id}) from location {data.location_id}");
+            }
+            else
+            {
+                VenueSync.Log.Debug($"Received disabled state for mod {data.mod.name} ({data.mod.id}) but it was not present in state");
+            }
+
+            _failedMods.Remove(data.mod.id);
+            _stateService.VenueState.failed_mods.Remove(data.mod.id);
+
+            ReloadAllMods();
+            return;
+        }
+
         var existingIndex = mods.FindIndex(m => string.Equals(m.id, data.mod.id, StringComparison.OrdinalIgnoreCase));
         if (existingIndex >= 0)
         {

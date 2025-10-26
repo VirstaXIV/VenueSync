@@ -220,14 +220,16 @@ public class ManageVenueWindow : Window, IDisposable
                 _manageLocationWindow.OpenForCreate(_venueId);
         }
         ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
 
         var venue = _stateService.UserState.venues.FirstOrDefault(v => v.id == _venueId);
         var locations = venue?.locations ?? [];
 
-        if (ImGui.BeginTable("EditVenueLocations", 3))
+        if (ImGui.BeginTable("EditVenueLocations", 3, ImGuiTableFlags.SizingStretchProp))
         {
             ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("House", ImGuiTableColumnFlags.WidthFixed, 180);
+            ImGui.TableSetupColumn("House", ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 180);
             ImGui.TableHeadersRow();
 
@@ -241,7 +243,13 @@ public class ManageVenueWindow : Window, IDisposable
                     ImGui.TextUnformatted(loc.name);
                     
                     ImGui.TableNextColumn();
-                    ImGui.TextUnformatted(loc.house_id);
+                    var house = _stateService.UserState.houses.FirstOrDefault(h => h.id == loc.house_id);
+                    var houseLabel = string.IsNullOrEmpty(loc.house_id)
+                        ? "—"
+                        : (house != null
+                            ? $"{house.district} {house.ward}/{house.plot} {house.world} [{house.data_center}]"
+                            : loc.house_id);
+                    ImGui.TextUnformatted(houseLabel);
 
                     ImGui.TableNextColumn();
                     var manageLabel = $"Manage##Location{loc.id}";
@@ -299,15 +307,17 @@ public class ManageVenueWindow : Window, IDisposable
                 _manageStaffWindow.OpenForCreate(_venueId);
         }
         ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
 
         var venue = _stateService.UserState.venues.FirstOrDefault(v => v.id == _venueId);
         var staff = venue?.staff ?? [];
 
-        if (ImGui.BeginTable("EditVenueStaff", 4))
+        if (ImGui.BeginTable("EditVenueStaff", 4, ImGuiTableFlags.SizingStretchProp))
         {
             ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Position", ImGuiTableColumnFlags.WidthFixed, 200);
-            ImGui.TableSetupColumn("Granted", ImGuiTableColumnFlags.WidthFixed, 200);
+            ImGui.TableSetupColumn("Position", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("Granted", ImGuiTableColumnFlags.WidthFixed, 120);
             ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 180);
             ImGui.TableHeadersRow();
 
@@ -502,13 +512,15 @@ public class ManageVenueWindow : Window, IDisposable
                 _manageScheduleWindow.OpenForCreate(_venueId);
         }
         ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
 
         var venue = _stateService.UserState.venues.FirstOrDefault(v => v.id == _venueId);
         var schedules = venue?.schedules ?? [];
 
-        if (ImGui.BeginTable("EditVenueSchedules", 4))
+        if (ImGui.BeginTable("EditVenueSchedules", 4, ImGuiTableFlags.SizingStretchProp))
         {
-            ImGui.TableSetupColumn("Day", ImGuiTableColumnFlags.WidthFixed, 140);
+            ImGui.TableSetupColumn("Day", ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupColumn("Open", ImGuiTableColumnFlags.WidthFixed, 120);
             ImGui.TableSetupColumn("Close", ImGuiTableColumnFlags.WidthFixed, 120);
             ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 180);
@@ -596,14 +608,16 @@ public class ManageVenueWindow : Window, IDisposable
                 _manageStreamWindow.OpenForCreate(_venueId);
         }
         ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
 
         var venue = _stateService.UserState.venues.FirstOrDefault(v => v.id == _venueId);
         var streams = venue?.streams ?? [];
 
-        if (ImGui.BeginTable("EditVenueStreams", 6))
+        if (ImGui.BeginTable("EditVenueStreams", 3, ImGuiTableFlags.SizingStretchProp))
         {
             ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Type", ImGuiTableColumnFlags.WidthFixed, 120);
+            ImGui.TableSetupColumn("Type", ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 120);
             ImGui.TableHeadersRow();
 

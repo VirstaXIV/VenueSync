@@ -27,6 +27,7 @@ public record MannequinModItem
     public string hash { get; init; } = "";
     public string mannequin_id { get; init; } = "";
     public string extension { get; init; } = "";
+    public bool enabled { get; set; } = true;
     public List<MannequinModFileItem> files { get; set; } = [];
 }
 

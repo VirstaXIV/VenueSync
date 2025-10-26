@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Interface.Windowing;
@@ -32,6 +34,61 @@ public class ManageScheduleWindow : Window, IDisposable
     [
         "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
     ];
+
+    private static readonly string[] TimezoneOptions =
+    [
+        "UTC",
+        "PST", "PDT",
+        "MST", "MDT",
+        "CST", "CDT",
+        "EST", "EDT",
+        "AKST", "AKDT",
+        "HST",
+        "AST", "ADT",
+        "NST", "NDT",
+        "GMT", "BST",
+        "CET", "CEST",
+        "EET", "EEST",
+        "MSK",
+        "IST",
+        "JST",
+        "KST",
+        "AEST", "AEDT",
+        "ACST", "ACDT",
+        "AWST",
+        "NZST", "NZDT"
+    ];
+
+    private static bool IsValidTimeHHmm(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s))
+            return false;
+        return TimeSpan.TryParseExact(s.Trim(), "hh\\:mm", CultureInfo.InvariantCulture, out _);
+    }
+
+    private static string NormalizeTime(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return string.Empty;
+
+        var s = input.Trim();
+
+        // If exactly 4 digits (e.g., "1800") -> "18:00"
+        if (Regex.IsMatch(s, "^\\d{4}$"))
+            return $"{s[0]}{s[1]}:{s[2]}{s[3]}";
+
+        // If H:MM or HH:M/M -> pad to 2 digits per part
+        var match = Regex.Match(s, "^(\\d{1,2}):(\\d{1,2})$");
+        if (match.Success)
+        {
+            var h = int.Parse(match.Groups[1].Value);
+            var m = int.Parse(match.Groups[2].Value);
+            if (h is >= 0 and <= 23 && m is >= 0 and <= 59)
+                return $"{h:00}:{m:00}";
+        }
+
+        return s;
+    }
 
     public ManageScheduleWindow(StateService stateService, ScheduleApi scheduleApi, ServiceDisconnected serviceDisconnected) : base("Manage Schedule")
     {
@@ -105,27 +162,41 @@ public class ManageScheduleWindow : Window, IDisposable
         ImGui.SetNextItemWidth(-1);
         var startBuf = _start;
         if (ImGui.InputText("##ScheduleStart", ref startBuf, 16))
-            _start = startBuf;
+        {
+            var normalized = NormalizeTime(startBuf);
+            _start = normalized;
+        }
+        var startValid = IsValidTimeHHmm(_start);
+        if (!string.IsNullOrWhiteSpace(_start) && !startValid)
+            ImGui.TextColored(new Vector4(1f, 0.3f, 0.3f, 1f), "Invalid time. Use HH:mm (e.g., 18:00)");
 
         ImGui.TextUnformatted("Close (HH:mm)");
         ImGui.SameLine();
         ImGui.SetNextItemWidth(-1);
         var endBuf = _end;
         if (ImGui.InputText("##ScheduleEnd", ref endBuf, 16))
-            _end = endBuf;
+        {
+            var normalizedEnd = NormalizeTime(endBuf);
+            _end = normalizedEnd;
+        }
+        var endValid = IsValidTimeHHmm(_end);
+        if (!string.IsNullOrWhiteSpace(_end) && !endValid)
+            ImGui.TextColored(new Vector4(1f, 0.3f, 0.3f, 1f), "Invalid time. Use HH:mm (e.g., 22:00)");
 
         ImGui.TextUnformatted("Timezone");
         ImGui.SameLine();
         ImGui.SetNextItemWidth(-1);
-        var tzBuf = _timezone;
-        if (ImGui.InputText("##ScheduleTimezone", ref tzBuf, 64))
-            _timezone = tzBuf;
+        var tzIndex = Math.Max(0, Array.IndexOf(TimezoneOptions, string.IsNullOrWhiteSpace(_timezone) ? "UTC" : _timezone));
+        if (ImGui.Combo("##ScheduleTimezone", ref tzIndex, TimezoneOptions, TimezoneOptions.Length))
+            _timezone = TimezoneOptions[tzIndex];
 
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 
-        var canSubmit = !_isSubmitting && !string.IsNullOrWhiteSpace(_venueId) && (_isEditMode || (!string.IsNullOrWhiteSpace(_start) && !string.IsNullOrWhiteSpace(_end)));
+        var canSubmit = !_isSubmitting && !string.IsNullOrWhiteSpace(_venueId)
+                        && !string.IsNullOrWhiteSpace(_start) && !string.IsNullOrWhiteSpace(_end)
+                        && IsValidTimeHHmm(_start) && IsValidTimeHHmm(_end);
         if (!canSubmit) ImGui.BeginDisabled();
         if (ImGui.Button(_isEditMode ? "Update Schedule" : "Create Schedule"))
         {
