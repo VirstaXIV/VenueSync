@@ -276,7 +276,8 @@ public class VenueWindow : Window, IDisposable
 
         var displayEnabled = isEnabledFromSettings && !failed;
 
-        if (ImGui.Checkbox($"##{id}", ref displayEnabled))
+        ImGui.PushID($"{id}:{mod.name}");
+        if (ImGui.Checkbox("##mod", ref displayEnabled))
         {
             var userEnabled = displayEnabled;
 
@@ -290,6 +291,7 @@ public class VenueWindow : Window, IDisposable
             _venueSettings.Save();
             _reloadMods.Invoke();
         }
+        ImGui.PopID();
 
         ImGui.SameLine();
         ImGui.Text(mod.name);
@@ -311,7 +313,7 @@ public class VenueWindow : Window, IDisposable
         {
             if (isEnabled)
             {
-                while (_venueSettings.InactiveMods.Remove(id)) { }
+                _venueSettings.InactiveMods.RemoveAll(m => m == id);
             }
             else
             {
@@ -328,7 +330,8 @@ public class VenueWindow : Window, IDisposable
             }
             else
             {
-                while (_venueSettings.ActiveMods.Remove(id)) { }
+                // Remove any duplicate entries safely in one operation.
+                _venueSettings.ActiveMods.RemoveAll(m => m == id);
             }
         }
     }

@@ -143,16 +143,7 @@ public class AccountApi: IDisposable
                 characters = result.Data.characters,
                 houses = result.Data.houses
             };
-
-            var beforeCount = _stateService.ModsState.modList?.Count ?? 0;
-            var incomingCount = result.Data.mods?.Count ?? 0;
-            VenueSync.Log.Debug($"ModsState update: before={beforeCount}, incoming={incomingCount}");
-
             _stateService.ModsState.modList = result.Data.mods ?? [];
-
-            var afterCount = _stateService.ModsState.modList?.Count ?? 0;
-            var firstName = afterCount > 0 ? _stateService.ModsState.modList?[0].name : "(none)";
-            VenueSync.Log.Debug($"ModsState update complete: after={afterCount}, first='{firstName}'");
         }
         catch (Exception exception)
         {
