@@ -425,6 +425,23 @@ public class SyncFileService : IDisposable
     {
         if (string.IsNullOrEmpty(_configuration.SyncFolder) || !Directory.Exists(_configuration.SyncFolder))
         {
+            if (_fileAccessTimes.Count <= 0)
+            {
+                return new StorageInfo {
+                    TotalBytes = 0,
+                    FileCount = 0,
+                    AvailableBytes = _configuration.MaxStorageSizeBytes
+                };
+            }
+            var removedAny = false;
+            foreach (var key in _fileAccessTimes.Keys.ToList().Where(key => !File.Exists(key)))
+            {
+                _fileAccessTimes.Remove(key);
+                removedAny = true;
+            }
+            if (removedAny)
+                SaveAccessTimes();
+
             return new StorageInfo 
             { 
                 TotalBytes = 0, 
@@ -433,13 +450,63 @@ public class SyncFileService : IDisposable
             };
         }
 
-        var files = Directory.GetFiles(_configuration.SyncFolder);
-        long totalSize = files.Sum(f => new FileInfo(f).Length);
-        
+        long totalSize = 0L;
+        int fileCount = 0;
+
+        foreach (var filePath in Directory.EnumerateFiles(_configuration.SyncFolder))
+        {
+            var name = Path.GetFileName(filePath);
+            if (string.Equals(name, accessTimeMetadataFile, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            try
+            {
+                var info = new FileInfo(filePath);
+                if (!info.Exists)
+                    continue;
+
+                // Accessing Length can throw if the file is concurrently deleted; guard with try/catch.
+                totalSize += info.Length;
+                fileCount++;
+            }
+            catch (FileNotFoundException)
+            {
+                // File was deleted between enumeration and inspection — ignore.
+            }
+            catch (IOException)
+            {
+                // Transient IO issues — ignore this file for the purpose of stats.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // No access to file — ignore for stats.
+            }
+        }
+
+        if (_fileAccessTimes.Count <= 0)
+        {
+            return new StorageInfo {
+                TotalBytes = totalSize,
+                FileCount = fileCount,
+                AvailableBytes = _configuration.MaxStorageSizeBytes
+            };
+        }
+        {
+            var removedAny = false;
+            foreach (var key in _fileAccessTimes.Keys.ToList().Where(key => !File.Exists(key)))
+            {
+                _fileAccessTimes.Remove(key);
+                removedAny = true;
+            }
+
+            if (removedAny)
+                SaveAccessTimes();
+        }
+
         return new StorageInfo
         {
             TotalBytes = totalSize,
-            FileCount = files.Length == 0 ? 0 : files.Length - 1,
+            FileCount = fileCount,
             AvailableBytes = _configuration.MaxStorageSizeBytes
         };
     }
@@ -598,6 +665,7 @@ public class SyncFileService : IDisposable
     private void UpdateFileAccessTime(string filePath)
     {
         _fileAccessTimes[filePath] = DateTime.Now;
+        SaveAccessTimes();
     }
     
     private DateTime GetFileAccessTime(string filePath)
@@ -605,7 +673,6 @@ public class SyncFileService : IDisposable
         if (_fileAccessTimes.TryGetValue(filePath, out var accessTime))
             return accessTime;
         
-        // Fallback to file system last access time
         if (File.Exists(filePath))
             return File.GetLastAccessTime(filePath);
         
@@ -705,10 +772,17 @@ public class SyncFileService : IDisposable
     {
         try
         {
+            var removed = false;
+
             if (File.Exists(localPath))
             {
                 File.Delete(localPath);
-                _fileAccessTimes.Remove(localPath);
+                removed = true;
+            }
+
+            if (_fileAccessTimes.Remove(localPath) || removed)
+            {
+                SaveAccessTimes();
             }
         }
         catch (Exception ex)

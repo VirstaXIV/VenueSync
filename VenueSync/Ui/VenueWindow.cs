@@ -43,6 +43,7 @@ public class VenueWindow : Window, IDisposable
     private readonly VenueWindowPosition _position;
     private readonly ReloadMods _reloadMods;
     private readonly DisableMods _disableMods;
+    private bool _pendingModChanges;
 
     public VenueWindow(
         IDalamudPluginInterface pluginInterface,
@@ -240,6 +241,7 @@ public class VenueWindow : Window, IDisposable
         DrawModsList(venue);
         DrawDownloadProgressIfActive();
         DrawModActionButtons();
+        ApplyPendingModChangesIfAny();
     }
 
     private void DrawModsList(VenueState venue)
@@ -257,18 +259,18 @@ public class VenueWindow : Window, IDisposable
         var modsListHeight = ImGui.GetContentRegionAvail().Y - reservedHeight;
         ImGui.BeginChild("ModsList", new Vector2(0, modsListHeight), true);
 
-        foreach (var mod in venue.location.mods)
+        for (int i = 0; i < venue.location.mods.Count; i++)
         {
-            DrawModCheckbox(mod);
+            DrawModCheckbox(venue.location.mods[i], i);
         }
 
         ImGui.EndChild();
     }
 
-    private void DrawModCheckbox(MannequinModItem mod)
+    private void DrawModCheckbox(MannequinModItem mod, int index)
     {
         var id = mod.id;
-        var isEnabledFromSettings = _configuration.AutoloadMods 
+        var isEnabledFromSettings = _configuration.AutoloadMods
             ? !_venueSettings.InactiveMods.Contains(id)
             : _venueSettings.ActiveMods.Contains(id);
 
@@ -276,25 +278,23 @@ public class VenueWindow : Window, IDisposable
 
         var displayEnabled = isEnabledFromSettings && !failed;
 
-        ImGui.PushID($"{id}:{mod.name}");
-        if (ImGui.Checkbox("##mod", ref displayEnabled))
+        var label = $"{mod.name}##{index}";
+        if (ImGui.Checkbox(label, ref displayEnabled))
         {
             var userEnabled = displayEnabled;
 
-            UpdateModState(id, userEnabled);
+            var changed = UpdateModState(id, userEnabled);
 
             if (userEnabled && failed)
             {
                 _stateService.VenueState.failed_mods.Remove(id);
             }
 
-            _venueSettings.Save();
-            _reloadMods.Invoke();
+            if (changed)
+            {
+                _pendingModChanges = true;
+            }
         }
-        ImGui.PopID();
-
-        ImGui.SameLine();
-        ImGui.Text(mod.name);
 
         if (failed)
         {
@@ -307,18 +307,23 @@ public class VenueWindow : Window, IDisposable
         }
     }
 
-    private void UpdateModState(string id, bool isEnabled)
+    private bool UpdateModState(string id, bool isEnabled)
     {
+        bool changed = false;
         if (_configuration.AutoloadMods)
         {
             if (isEnabled)
             {
-                _venueSettings.InactiveMods.RemoveAll(m => m == id);
+                var removed = _venueSettings.InactiveMods.RemoveAll(m => m == id);
+                if (removed > 0) changed = true;
             }
             else
             {
                 if (!_venueSettings.InactiveMods.Contains(id))
+                {
                     _venueSettings.InactiveMods.Add(id);
+                    changed = true;
+                }
             }
         }
         else
@@ -326,14 +331,19 @@ public class VenueWindow : Window, IDisposable
             if (isEnabled)
             {
                 if (!_venueSettings.ActiveMods.Contains(id))
+                {
                     _venueSettings.ActiveMods.Add(id);
+                    changed = true;
+                }
             }
             else
             {
-                // Remove any duplicate entries safely in one operation.
-                _venueSettings.ActiveMods.RemoveAll(m => m == id);
+                var removed = _venueSettings.ActiveMods.RemoveAll(m => m == id);
+                if (removed > 0) changed = true;
             }
         }
+
+        return changed;
     }
 
     private void DrawDownloadProgressIfActive()
@@ -356,6 +366,16 @@ public class VenueWindow : Window, IDisposable
 
         DrawStyledButton("Disable All Mods", VenueColors.DisableButton, VenueColors.DisableButtonHover, 
             new Vector2(-1, ButtonHeight), () => _disableMods.Invoke(), "Temporarily disable all venue mods");
+    }
+
+    private void ApplyPendingModChangesIfAny()
+    {
+        if (!_pendingModChanges)
+            return;
+
+        _venueSettings.Save();
+        _reloadMods.Invoke();
+        _pendingModChanges = false;
     }
 
     private void DrawMainContent()

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using VenueSync.Services;
 using ErrorEventArgs = Newtonsoft.Json.Serialization.ErrorEventArgs;
@@ -44,6 +45,11 @@ public class VenueSettings: ISavable
             {
                 Error = HandleDeserializationError,
             });
+
+            if (SanitizeForCurrentVenue())
+            {
+                Save();
+            }
         }
         catch (Exception exception)
         {
@@ -55,7 +61,48 @@ public class VenueSettings: ISavable
     {
         if (_stateService.VenueState.id != string.Empty)
         {
+            SanitizeForCurrentVenue();
             _saveService.DelaySave(this, TimeSpan.FromSeconds(5));
+        }
+    }
+
+    private bool SanitizeForCurrentVenue()
+    {
+        try
+        {
+            HashSet<string>? validIds = null;
+            var venue = _stateService.VenueState;
+            if (venue != null && venue.location != null && venue.location.mods != null && venue.location.mods.Count > 0)
+            {
+                validIds = new HashSet<string>(venue.location.mods.Select(m => m.id), StringComparer.OrdinalIgnoreCase);
+            }
+
+            var beforeActive = ActiveMods.ToList();
+            var beforeInactive = InactiveMods.ToList();
+
+            IEnumerable<string> Normalize(IEnumerable<string> src) =>
+                src.Where(s => !string.IsNullOrWhiteSpace(s))
+                   .Select(s => s.Trim())
+                   .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            var newActive = Normalize(ActiveMods);
+            var newInactive = Normalize(InactiveMods);
+
+            if (validIds != null)
+            {
+                newActive = newActive.Where(validIds.Contains);
+                newInactive = newInactive.Where(validIds.Contains);
+            }
+
+            ActiveMods = newActive.OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToList();
+            InactiveMods = newInactive.OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToList();
+
+            bool changed = !beforeActive.SequenceEqual(ActiveMods) || !beforeInactive.SequenceEqual(InactiveMods);
+            return changed;
+        }
+        catch
+        {
+            return false;
         }
     }
     
