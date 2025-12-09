@@ -26,6 +26,16 @@ public class VenueApi : IDisposable
         _api.Dispose();
     }
 
+    // GET /venues/{venue}
+    public Task<ApiResult<UserVenueItem>> ShowAsync(string venueId, CancellationToken ct = default)
+    {
+        return _api.SendAsync<UserVenueItem>(
+            "venues.show",
+            routeParams: new Dictionary<string, string> { { "venue", venueId } },
+            ct: ct
+        );
+    }
+
     // POST /venues
     public Task<ApiResult<UserVenueItem>> StoreAsync(object venuePayload, CancellationToken ct = default)
     {

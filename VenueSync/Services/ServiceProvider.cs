@@ -57,6 +57,7 @@ public static class ServiceProvider
                    .AddDalamudService<IDataManager>(pluginInterface)
                    .AddDalamudService<IClientState>(pluginInterface)
                    .AddDalamudService<ICondition>(pluginInterface)
+                   .AddDalamudService<IPlayerState>(pluginInterface)
                    .AddDalamudService<IGameGui>(pluginInterface)
                    .AddDalamudService<IChatGui>(pluginInterface)
                    .AddDalamudService<IFramework>(pluginInterface)

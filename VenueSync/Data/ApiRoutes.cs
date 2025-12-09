@@ -25,6 +25,7 @@ public static class ApiRoutes
         { "characters.verify", new ApiRoute("characters.verify", HttpMethod.Post, "/characters/verify", true) },
 
         // Venues
+        { "venues.show", new ApiRoute("venues.show", HttpMethod.Get, "/venues/{venue}", true) },
         { "venues.store", new ApiRoute("venues.store", HttpMethod.Post, "/venues", true) },
         { "venues.update", new ApiRoute("venues.update", HttpMethod.Post, "/venues/{venue}", true) },
         { "venues.logo", new ApiRoute("venues.logo", HttpMethod.Post, "/venues/{venue}/logo", true) },

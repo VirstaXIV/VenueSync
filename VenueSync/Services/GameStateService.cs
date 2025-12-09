@@ -24,6 +24,7 @@ public class GameStateService: IDisposable
         
     private readonly IFramework _framework;
     private readonly IClientState _clientState;
+    private readonly IPlayerState _playerState;
     private readonly ICondition _condition;
     private readonly StateService _stateService;
     private readonly TerritoryWatcher _territoryWatcher;
@@ -41,6 +42,7 @@ public class GameStateService: IDisposable
     public GameStateService(
         IFramework framework, 
         IClientState clientState, 
+        IPlayerState playerState,
         ICondition condition, 
         IGameInteropProvider gameInteropProvider,
         StateService stateService, 
@@ -53,6 +55,7 @@ public class GameStateService: IDisposable
     {
         _framework = framework;
         _clientState = clientState;
+        _playerState = playerState;
         _condition = condition;
         _stateService = stateService;
         _territoryWatcher = territoryWatcher;
@@ -112,7 +115,7 @@ public class GameStateService: IDisposable
     {
         try
         {
-            if (_clientState.LocalPlayer?.IsDead ?? false)
+            if (!_playerState?.IsLoaded ?? false)
             {
                 return;
             }
@@ -178,14 +181,14 @@ public class GameStateService: IDisposable
 
     private void UpdateCharacterState()
     {
-        var localPlayer = _clientState.LocalPlayer;
+        var localPlayer = _playerState;
         
-        if (localPlayer != null && !IsCharacterSet)
+        if (localPlayer.IsLoaded && !IsCharacterSet)
         {
             IsCharacterSet = true;
             SetCurrentPlayer();
         }
-        else if (localPlayer == null && IsCharacterSet)
+        else if (!localPlayer.IsLoaded && IsCharacterSet)
         {
             IsCharacterSet = false;
         }
@@ -195,13 +198,13 @@ public class GameStateService: IDisposable
     {
         EnsureIsOnFramework();
         
-        var player = _clientState.LocalPlayer;
-        if (player == null)
+        var player = _playerState;
+        if (!player.IsLoaded)
         {
             return;
         }
 
-        var name = player.Name.TextValue;
+        var name = player.CharacterName;
         var world = player.HomeWorld.Value.Name.ToString().ToLower();
         var worldId = player.HomeWorld.Value.RowId;
         var dataCenter = (

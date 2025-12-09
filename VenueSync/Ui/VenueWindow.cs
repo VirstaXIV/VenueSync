@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Utility;
@@ -37,12 +38,14 @@ public class VenueWindow : Window, IDisposable
     private readonly VenueSettings _venueSettings;
     private readonly StateService _stateService;
     private readonly LocationApi _locationApi;
+    private readonly VenueApi _venueApi;
     private readonly SyncFileService _syncFileService;
     private readonly GuestListWidget _guestListWidget;
     private readonly StaffListWidget _staffListWidget;
     private readonly VenueWindowPosition _position;
     private readonly ReloadMods _reloadMods;
     private readonly DisableMods _disableMods;
+    private readonly VenueUpdated _venueUpdated;
     private bool _pendingModChanges;
 
     public VenueWindow(
@@ -54,9 +57,11 @@ public class VenueWindow : Window, IDisposable
         StaffListWidget staffListWidget,
         StateService stateService,
         LocationApi locationApi,
+        VenueApi venueApi,
         VenueWindowPosition position,
         ReloadMods reloadMods,
         DisableMods disableMods,
+        VenueUpdated venueUpdated,
         ServiceDisconnected serviceDisconnected) : base("VenueSyncVenueWindow")
     {
         pluginInterface.UiBuilder.DisableGposeUiHide = true;
@@ -65,17 +70,36 @@ public class VenueWindow : Window, IDisposable
             MinimumSize = new Vector2(800, 700),
             MaximumSize = new Vector2(1000, 900),
         };
-        
+
         _configuration = configuration;
         _venueSettings = venueSettings;
         _stateService = stateService;
         _locationApi = locationApi;
+        _venueApi = venueApi;
         _syncFileService = syncFileService;
         _guestListWidget = guestListWidget;
         _staffListWidget = staffListWidget;
         _position = position;
         _reloadMods = reloadMods;
         _disableMods = disableMods;
+        _venueUpdated = venueUpdated;
+
+        TitleBarButtons = new() {
+            new TitleBarButton() {
+                Icon = FontAwesomeIcon.ArrowsSpin,
+                Click = (msg) =>
+                {
+                    RefreshVenueData();
+                },
+                IconOffset = new(2, 1),
+                ShowTooltip = () =>
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.Text("Refresh Venue Data");
+                    ImGui.EndTooltip();
+                }
+            }
+        };
 
         serviceDisconnected.Subscribe(OnDisconnect, ServiceDisconnected.Priority.High);
     }
@@ -616,6 +640,60 @@ public class VenueWindow : Window, IDisposable
         if (tooltip != null && ImGui.IsItemHovered())
         {
             ImGui.SetTooltip(tooltip);
+        }
+    }
+
+    private void RefreshVenueData()
+    {
+        _ = Task.Run(RefreshVenueDataAsync);
+    }
+
+    private async Task RefreshVenueDataAsync()
+    {
+        try
+        {
+            var current = _stateService.VenueState;
+            if (string.IsNullOrEmpty(current.id))
+                return;
+
+            var result = await _venueApi.ShowAsync(current.id).ConfigureAwait(false);
+            if (!result.Success || result.Data is null)
+                return;
+
+            var item = result.Data;
+            
+            VenueSync.Log.Debug($"Refreshing Venue: {item.name}");
+
+            var updated = new VenueState
+            {
+                id = item.id,
+                name = item.name ?? current.name,
+                description = item.description ?? current.description,
+                logo = item.logo ?? current.logo,
+                discord_invite = item.discord_invite ?? current.discord_invite,
+                carrd_url = item.carrd_url ?? current.carrd_url,
+                hash = item.hash ?? current.hash,
+                open_hours = current.open_hours,
+                active_stream = current.active_stream,
+                tags = item.tags ?? new List<string>(),
+                staff = item.staff.Select(s => new VenueStaff { name = s.name, position = s.position }).ToList(),
+                streams = item.streams.Select(s => new VenueStream
+                {
+                    id = s.id,
+                    name = s.name,
+                    username = s.username,
+                    type = s.type,
+                    logo = s.logo,
+                    hash = s.hash
+                }).ToList(),
+                location = current.location
+            };
+
+            _venueUpdated.Invoke(updated);
+        }
+        catch (Exception ex)
+        {
+            VenueSync.Log.Debug($"Failed to refresh venue: {ex.Message}");
         }
     }
 
