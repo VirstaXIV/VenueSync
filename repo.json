@@ -5,6 +5,7 @@
         "Description": "Provides information on venues and data related to them.",
         "RepoUrl": "https://github.com/VirstaXIV/VenueSync",
         "Punchline": "Venue data syncing and management.",
+        "AssemblyVersion": "0.7.8",
         "DownloadLinkInstall": "https://github.com/VirstaXIV/VenueSync/releases/download/0.7.8/latest.zip",
         "DownloadLinkTesting": "https://github.com/VirstaXIV/VenueSync/releases/download/0.7.8/latest.zip",
         "DownloadLinkUpdate": "https://github.com/VirstaXIV/VenueSync/releases/download/0.7.8/latest.zip",
