@@ -1,20 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Dalamud.NET.Sdk/13.1.0">
-  <PropertyGroup>
-    <Version>0.7.6</Version>
-    <Description>VenueSync</Description>
-    <PackageProjectUrl>https://github.com/VirstaXIV/VenueSync</PackageProjectUrl>
-    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
-    <IsPackable>false</IsPackable>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\OtterGui\OtterGui.csproj" />
-    <ProjectReference Include="..\Penumbra.Api\Penumbra.Api.csproj" />
-    <ProjectReference Include="..\Penumbra.GameData\Penumbra.GameData.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="PusherClient" Version="2.3.0-beta" />
-  </ItemGroup>
+<Project Sdk="Dalamud.NET.Sdk/14.0.1">
+    <PropertyGroup>
+        <Author>Virsta</Author>
+        <Name>VenueSync</Name>
+        <MinimumDalamudVersion>14.0.0</MinimumDalamudVersion>
+        <Version>0.7.8</Version>
+        <ApplicableVersion>any</ApplicableVersion>
+        <Punchline>Venue data syncing and management.</Punchline>
+        <Description>Provides information on venues and data related to them. /venuesync to open options. Can shift left click on server info icon to open settings as well (left click to open venue if in one). Or right click to connect / disconnect.</Description>
+        <RepoUrl>https://github.com/VirstaXIV/VenueSync</RepoUrl>
+        <Tags>venue;guests</Tags>
+        <IconUrl>https://raw.githubusercontent.com/VirstaXIV/VenueSync/master/images/icon.png</IconUrl>
+        <PackageProjectUrl>https://github.com/VirstaXIV/VenueSync</PackageProjectUrl>
+        <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\OtterGui\OtterGui.csproj" />
+        <ProjectReference Include="..\Penumbra.Api\Penumbra.Api.csproj" />
+        <ProjectReference Include="..\Penumbra.GameData\Penumbra.GameData.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <PackageReference Include="PusherClient" Version="2.3.0-beta" />
+    </ItemGroup>
 </Project>
